@@ -15,24 +15,34 @@ function extractTestCaseName(scenarioContent: string, fallbackId: string): strin
   return trimmed || fallbackId;
 }
 
+const TESTCASES_DIR = "testcases";
+
 /**
  * Builds a suite from markdown files (fallback when index is missing or empty).
+ * Uses relative path from /testcases for sourceFile (e.g. "Folder/File.md").
  */
 export function buildSuiteFromMarkdown(searchText: string): GeneratedSuite {
+  const baseDir = path.join(process.cwd(), TESTCASES_DIR);
   const absolutePaths = discoverTestFiles(searchText);
-  const sourceFiles = absolutePaths.map((p) => path.basename(p));
+  const sourceFilesSeen = new Set<string>();
+  const sourceFiles: string[] = [];
   const testCases: TestCaseDefinition[] = [];
   let counter = 1;
 
   for (const filePath of absolutePaths) {
+    const rel = path.relative(baseDir, filePath);
+    const relativePath = rel.split(path.sep).join("/");
+    if (!sourceFilesSeen.has(relativePath)) {
+      sourceFilesSeen.add(relativePath);
+      sourceFiles.push(relativePath);
+    }
     const scenarios = parseScenarios(filePath);
-    const baseName = path.basename(filePath);
     for (const scenarioContent of scenarios) {
       const id = `T${String(counter).padStart(2, "0")}`;
       testCases.push({
         id,
         testCaseName: extractTestCaseName(scenarioContent, id),
-        sourceFile: baseName,
+        sourceFile: relativePath,
         scenarioContent,
       });
       counter++;

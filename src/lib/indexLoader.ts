@@ -20,12 +20,14 @@ export function loadIndex(): TestCaseIndexRecord[] {
 }
 
 /**
- * Filters the index by search text: include records whose fileName contains
- * the exact input text (case-sensitive). Preserves deterministic order.
+ * Filters the index by search text: include records whose filename (basename)
+ * contains the exact input text (case-sensitive). Preserves deterministic order.
  */
 export function filterIndexBySearchText(
   index: TestCaseIndexRecord[],
   searchText: string
 ): TestCaseIndexRecord[] {
-  return index.filter((record) => record.fileName.includes(searchText));
+  return index.filter((record) =>
+    path.basename(record.fileName).includes(searchText)
+  );
 }

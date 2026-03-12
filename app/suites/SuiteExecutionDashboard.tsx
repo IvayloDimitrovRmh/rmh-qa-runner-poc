@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback, useEffect, useRef } from "react";
 import type { GeneratedSuite, TestCaseDefinition } from "@/src/lib/types";
 
 export type ExecutionStatus = "NOT RUN" | "PASS" | "FAIL" | "BLOCKED";
@@ -23,6 +23,17 @@ function getStorageKey(searchText: string): string {
 
 function getDefaultExecution(testId: string): ExecutionState {
   return { testId, status: "NOT RUN", comment: "", attachment: "" };
+}
+
+function testMatchesSearch(tc: TestCaseDefinition, searchLower: string): boolean {
+  if (!searchLower) return true;
+  const text = [
+    tc.id,
+    tc.testCaseName,
+    tc.sourceFile,
+    tc.scenarioContent,
+  ].join(" ");
+  return text.toLowerCase().includes(searchLower);
 }
 
 function isValidStatus(s: string): s is ExecutionStatus {
@@ -89,6 +100,35 @@ function escapeHtml(s: string): string {
 
 function sanitizeFilename(name: string): string {
   return name.replace(/[\\/:*?"<>|]/g, "-").trim() || "suite";
+}
+
+export interface ExportedProgress {
+  suiteName: string;
+  exportedAt: string;
+  executionState: Record<string, ExecutionState>;
+}
+
+function isValidExecutionState(v: unknown): v is ExecutionState {
+  return (
+    v !== null &&
+    typeof v === "object" &&
+    typeof (v as ExecutionState).testId === "string" &&
+    isValidStatus((v as ExecutionState).status) &&
+    typeof (v as ExecutionState).comment === "string" &&
+    typeof (v as ExecutionState).attachment === "string"
+  );
+}
+
+function downloadJson(data: unknown, filename: string) {
+  const blob = new Blob([JSON.stringify(data, null, 2)], {
+    type: "application/json;charset=utf-8",
+  });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  a.click();
+  URL.revokeObjectURL(url);
 }
 
 function buildExportHtml(
@@ -344,6 +384,7 @@ export default function SuiteExecutionDashboard({ suite }: { suite: GeneratedSui
     () => loadFromStorage(suite.suiteName)
   );
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("ALL");
+  const [textSearch, setTextSearch] = useState("");
   const [expandedByTestId, setExpandedByTestId] = useState<Record<string, boolean>>({});
 
   const getExecution = useCallback(
@@ -353,10 +394,16 @@ export default function SuiteExecutionDashboard({ suite }: { suite: GeneratedSui
     [executionByTestId]
   );
 
-  const visibleTests =
+  const statusFiltered =
     statusFilter === "ALL"
       ? suite.testCases
       : suite.testCases.filter((tc) => getExecution(tc.id).status === statusFilter);
+
+  const searchTrimmed = textSearch.trim().toLowerCase();
+  const visibleTests =
+    searchTrimmed === ""
+      ? statusFiltered
+      : statusFiltered.filter((tc) => testMatchesSearch(tc, searchTrimmed));
 
   useEffect(() => {
     setExecutionByTestId(loadFromStorage(suite.suiteName));
@@ -389,6 +436,63 @@ export default function SuiteExecutionDashboard({ suite }: { suite: GeneratedSui
   const collapseAll = useCallback(() => {
     setExpandedByTestId({});
   }, []);
+
+  const exportProgress = useCallback(() => {
+    const payload: ExportedProgress = {
+      suiteName: suite.suiteName,
+      exportedAt: new Date().toISOString(),
+      executionState: executionByTestId,
+    };
+    const timestamp = new Date().toISOString().replace(/[:.]/g, "-").slice(0, 19);
+    downloadJson(payload, `suite-progress-${timestamp}.json`);
+  }, [suite.suiteName, executionByTestId]);
+
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const importProgress = useCallback(() => {
+    fileInputRef.current?.click();
+  }, []);
+
+  const handleImportFile = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      const file = e.target.files?.[0];
+      e.target.value = "";
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = () => {
+        try {
+          const raw = reader.result;
+          if (typeof raw !== "string") return;
+          const data = JSON.parse(raw) as unknown;
+          if (!data || typeof data !== "object" || !("executionState" in data)) return;
+          const state = (data as { executionState?: unknown }).executionState;
+          if (!state || typeof state !== "object") return;
+          if (
+            "suiteName" in data &&
+            typeof data.suiteName === "string" &&
+            data.suiteName !== suite.suiteName
+          ) {
+            const proceed = window.confirm(
+              `This file was exported from suite "${data.suiteName}". Current suite is "${suite.suiteName}". Import anyway?`
+            );
+            if (!proceed) return;
+          }
+          const currentTestIds = new Set(suite.testCases.map((tc) => tc.id));
+          const merged: Record<string, ExecutionState> = { ...executionByTestId };
+          for (const key of Object.keys(state)) {
+            if (!currentTestIds.has(key)) continue;
+            const v = (state as Record<string, unknown>)[key];
+            if (isValidExecutionState(v)) merged[key] = v;
+          }
+          setExecutionByTestId(merged);
+        } catch {
+          // malformed file: do nothing
+        }
+      };
+      reader.readAsText(file);
+    },
+    [suite.suiteName, suite.testCases, executionByTestId]
+  );
 
   return (
     <>
@@ -426,7 +530,42 @@ export default function SuiteExecutionDashboard({ suite }: { suite: GeneratedSui
 
       <ExecutionSummary testCases={suite.testCases} executionByTestId={executionByTestId} />
 
+      <div className="mb-4 flex flex-wrap items-center gap-2">
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept=".json"
+          className="hidden"
+          onChange={handleImportFile}
+          aria-hidden
+        />
+        <button
+          type="button"
+          onClick={exportProgress}
+          className="rounded-md border border-zinc-300 bg-white px-4 py-2 text-sm font-medium text-zinc-700 hover:bg-zinc-100 dark:border-zinc-600 dark:bg-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-700"
+        >
+          Export Progress
+        </button>
+        <button
+          type="button"
+          onClick={importProgress}
+          className="rounded-md border border-zinc-300 bg-white px-4 py-2 text-sm font-medium text-zinc-700 hover:bg-zinc-100 dark:border-zinc-600 dark:bg-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-700"
+        >
+          Import Progress
+        </button>
+      </div>
+
       <div className="mb-4 flex flex-wrap items-center gap-3">
+        <label className="flex items-center gap-2 text-sm text-zinc-600 dark:text-zinc-400">
+          Search in suite
+          <input
+            type="search"
+            value={textSearch}
+            onChange={(e) => setTextSearch(e.target.value)}
+            placeholder="Filter by text…"
+            className="rounded border border-zinc-300 bg-white px-2 py-1.5 text-sm text-zinc-900 placeholder-zinc-500 dark:border-zinc-600 dark:bg-zinc-800 dark:text-zinc-100 dark:placeholder-zinc-400"
+          />
+        </label>
         <label className="flex items-center gap-2 text-sm text-zinc-600 dark:text-zinc-400">
           Filter by status
           <select

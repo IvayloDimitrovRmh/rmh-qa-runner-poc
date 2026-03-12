@@ -501,9 +501,6 @@ export default function SuiteExecutionDashboard({ suite }: { suite: GeneratedSui
           Search text used: {suite.suiteName}
         </h2>
         <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
-          Source files: {suite.sourceFiles.length > 0 ? suite.sourceFiles.join(", ") : "none"}
-        </p>
-        <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
           Total tests: {suite.testCases.length}
         </p>
         <div className="mt-4 flex flex-wrap gap-2">

@@ -14,18 +14,6 @@ Priority: 9
 
 # Scenario: Select AR customer > Make a sale more than available credit limit by Account Tender
 
-## Business Entity
-
-Sale transaction / Account Receivable tender / Split tender (AR credit + additional tender type)
-
-## Business Purpose
-
-Allow AR customers to use their available credit and require additional payment methods when sale exceeds credit limit, ensuring accurate AR balance tracking and preventing customers from exceeding their approved credit limit in both Store and Central.
-
-## Trigger
-
-User selects an AR customer in POS and attempts to complete a sale where the transaction total exceeds the customer's available credit limit using Account (Store Credit) tender.
-
 ## Preconditions
 
 - POS is operational and cashier is logged in
@@ -112,18 +100,6 @@ User selects an AR customer in POS and attempts to complete a sale where the tra
   - Updated AR balance information (Balance Due, Available Credit, Next Payment Due)
 - Inventory is adjusted (items subtracted from on-hand quantity)
 
-## Expected Result in Target System
-
-- Sale transaction is created/visible in Central database after sync
-- Split tender details are reflected in Central (Store Credit amount + other tender amount)
-- AR balance is updated in Central (matches Store):
-  - Customer Balance Due increased by Store Credit amount
-  - Available Credit decreased by Store Credit amount
-- Transaction syncs automatically via Central Client
-- Transaction is available for Central Manager reporting
-- AR invoice for Store Credit portion syncs to Central
-- AR reports show updated customer balance and credit utilization
-
 ## Validation Points
 
 - **If split tender enforced:**
@@ -140,50 +116,3 @@ User selects an AR customer in POS and attempts to complete a sale where the tra
 - Verify split tender amounts map correctly from Store to Central
 - Mapping validation: Transaction fields (Store ID, Transaction number, customer account ID, split tender details, AR balance updates, timestamp) map correctly from Store to Central
 - Duplicate prevention: No duplicate sale in Central for the same Transaction number
-
-## Negative / Edge Case Coverage
-
-- **Sale exactly equals available credit:** Customer can tender full amount to Store Credit; no split tender needed; Available Credit becomes $0 after sale
-- **Sale exceeds credit limit but POS allows (TBD):** If POS allows exceeding credit limit, this violates AR best practice; store should configure to prevent this; verify credit limit enforcement
-- **Credit limit changes mid-transaction (TBD):** If AR account credit limit is changed in Store Manager while transaction is in progress in POS, POS uses credit limit/available credit active at time customer was selected; to apply updated credit limit, clear customer and re-select
-- **Second tender payment declined/failed (TBD):** If split tender is used and second tender type (e.g., credit card) is declined, cashier must use different tender type or cancel transaction; Store Credit portion may need to be voided if transaction is cancelled
-- **Customer attempts to use more Store Credit than available (TBD):** POS should prevent entering Store Credit amount > Available Credit; cashier should receive error/warning; verify credit limit enforcement
-- **Zero available credit:** If customer has $0 Available Credit, POS should prevent using Store Credit tender; entire transaction must be paid with other tender types
-- **Negative available credit (over-limit):** If customer account is already over credit limit (Balance Due > Credit Limit), Available Credit shows as negative or $0; POS should prevent using Store Credit tender
-- **Store Credit tender with no customer selected:** If cashier attempts to use Store Credit tender without selecting AR customer, POS prevents it; customer must be selected first
-- **Customer not linked to AR account:** If customer exists but is not linked to AR account (no Account Receivable tab configured), Store Credit tender is not available
-- **Multiple AR accounts per customer (TBD):** RMH documentation does not clearly address multiple AR accounts per customer; typically one customer = one AR account
-- **POS offline then sync later:** Sale with split tender (Store Credit + other) created locally in Store database, then synced to Central when connectivity is restored; AR balance update also queued for sync
-- **Sync failure then retry:** Central Client automatically retries failed sync jobs; verify sale and AR balance update appear in Central after retry (check Central Client Dashboard for failed jobs)
-- **Duplicate prevention across repeated sync attempts:** Sale sync is idempotent; repeated sync does not create duplicate transactions or double-charge AR balance
-- **AR invoice creation:** Sale charged to Store Credit creates AR invoice in Store; verify invoice syncs to Central and appears in customer AR statement
-- **Statement generation:** Customer AR statement includes all invoices (including split tender transactions); verify statement accuracy
-- **Consistency Checker:** If sale or AR balance update fails to sync, run Consistency Checker to synchronize missing records to Central
-
-## Known Issues / Notes
-
-- **Video link:** TBD
-- **Notes:** Expected text states should allow available credit use and prompt for remaining payment; should insert into Store and Central
-- Reference: RMH documentation - [Tendering store credit](https://github.com/rmhpos/gitbook-repo/blob/main/docs/POS_UG_Topics/transactions-tendering-store-credit.md)
-- Reference: RMH documentation - [About AR](https://github.com/rmhpos/gitbook-repo/blob/main/docs/POS_UG_Topics/about-ar.md)
-- Reference: RMH documentation - [Processing AR payments](https://github.com/rmhpos/gitbook-repo/blob/main/docs/POS_UG_Topics/processing-payments-ar.md)
-- Reference: RMH documentation - [AR best practices](https://github.com/rmhpos/gitbook-repo/blob/main/docs/SM_UG_Topics/accounts-receivable-best-practices.md)
-- Reference: RMH documentation - [Setting up account groups](https://github.com/rmhpos/gitbook-repo/blob/main/docs/SM_UG_Topics/setting-up-account-groups.md)
-- **CRITICAL - TBD:** Specific behavior when sale exceeds available credit limit is **not explicitly documented** in RMH documentation; the scenarios described above (split tender enforcement vs. allowing over-limit) are inferred from AR best practices and general tender behavior
-- **AR best practice:** RMH documentation states "Hold the company or person to their credit limit and payment terms," indicating credit limits should be enforced
-- **Store Credit = Account Receivable:** "Store Credit" and "Account Receivable (AR)" refer to the same functionality in RMH; customer buys on credit and pays later
-- **AR account setup required:** Customer must have AR account linked (Customer | Account Receivable tab) to use Store Credit tender
-- **Credit limit configured in Account Group:** Credit limit is set at AR Account Group level (Setup | Customer | Account Groups | Credit Limit); all customers in same account group share same credit limit
-- **Available Credit calculation:** Available Credit = Credit Limit - Balance Due
-- **Balance Due:** Total of all unpaid AR invoices for customer
-- **AR customer information in POS:** When AR customer is selected, POS displays:
-  - Available Credit
-  - Balance Due
-  - Next Payment Due date (if applicable)
-- **Store Credit tender type:** Must be configured in Setup | Financial | Tender Types
-- **AR invoice creation:** Each sale charged to Store Credit creates an AR invoice
-- **Application method:** Account Groups can be configured with "Manual" or "Apply to oldest" application method for AR payments; this affects how payments are applied to invoices, not how sales are tendered
-- **Split tender support:** RMH supports split tender (multiple tender types in one transaction); this can be used to stay within credit limits
-- **Sequential tendering:** Starting with release 3.50.3, RMH supports sequential tendering (process payments one at a time); this may be relevant for split tender scenarios
-- **No explicit credit limit override permission:** RMH documentation does not mention a specific permission to override credit limits; enforcement is through configuration and store policy
-- **AR reporting:** AR reports in Central Manager and Store Manager track customer balances, aging, and credit utilization

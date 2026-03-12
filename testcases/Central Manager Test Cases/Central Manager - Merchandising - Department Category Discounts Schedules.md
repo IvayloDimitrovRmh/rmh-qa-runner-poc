@@ -13,15 +13,6 @@ Priority: Unknown
 
 # Scenario: Department Synchronization to Selected Stores
 
-## Business Entity
-Department
-
-## Business Purpose
-Ensure that Departments created or updated in Central Manager synchronize correctly to the selected Store Groups so that item categorization remains consistent across all stores.
-
-## Trigger
-A user creates or updates a Department in Central Manager and assigns it to one or more Store Groups.
-
 ## Preconditions
 - Central and Store synchronization services are active.
 - At least one Store Group exists.
@@ -45,25 +36,9 @@ Central Manager → Merchandising → Department
 6. Allow synchronization to occur.
 7. Verify the department appears in the assigned store(s).
 
-## Expected Results
-- Department is inserted or updated in the selected store(s).
-- Department configuration matches the Central Manager configuration.
-
 ## Validation Checks
 - Department exists in store configuration.
 - Department name and code match Central.
-
-## Pass Criteria
-- Department appears in store(s) with correct data.
-
-## Fail Criteria
-- Department missing from store(s) or incorrect data.
-
-## Risks / Assumptions
-- Synchronization timing may depend on configured sync intervals.
-
-## Known Issues / Notes
-- Actual Result observed: Pass insert/update
 
 # Merchandising
 
@@ -80,15 +55,6 @@ Priority: Unknown
 
 # Scenario: Department Synchronization to Selected Stores
 
-## Business Entity
-Department
-
-## Business Purpose
-Ensure that Departments created or updated in Central Manager synchronize correctly to the selected Store Groups so that item categorization remains consistent across all stores.
-
-## Trigger
-A user creates or updates a Department in Central Manager and assigns it to one or more Store Groups.
-
 ## Preconditions
 - Central and Store synchronization services are active.
 - At least one Store Group exists.
@@ -112,38 +78,13 @@ Central Manager → Merchandising → Department
 6. Allow synchronization to occur.
 7. Verify the department appears in the assigned store(s).
 
-## Expected Results
-- Department is inserted or updated in the selected store(s).
-- Department configuration matches the Central Manager configuration.
-
 ## Validation Checks
 - Department exists in store configuration.
 - Department name and code match Central.
 
-## Pass Criteria
-- Department appears in store(s) with correct data.
-
-## Fail Criteria
-- Department missing from store(s) or incorrect data.
-
-## Risks / Assumptions
-- Synchronization timing may depend on configured sync intervals.
-
-## Known Issues / Notes
-- Actual Result observed: Pass insert/update
-
 ---
 
 # Scenario: Discount Synchronization to Selected Stores
-
-## Business Entity
-Discount
-
-## Business Purpose
-Ensure that Discounts configured in Central Manager synchronize correctly to stores so that promotional pricing and discount rules apply consistently across the system.
-
-## Trigger
-A user creates or updates a Discount in Central Manager.
 
 ## Preconditions
 - Central and Store synchronization services are active.
@@ -167,37 +108,13 @@ Central Manager → Merchandising → Discounts
 5. Allow synchronization to occur.
 6. Verify the discount exists in store configuration.
 
-## Expected Results
-- Discount is inserted or updated in the selected store(s).
-
 ## Validation Checks
 - Discount rule appears in store configuration.
 - Discount values match Central configuration.
 
-## Pass Criteria
-- Discount rule exists and matches Central.
-
-## Fail Criteria
-- Discount rule missing or incorrect.
-
-## Risks / Assumptions
-- Discounts may depend on item or category synchronization.
-
-## Known Issues / Notes
-- Actual Result observed: Pass insert/update
-
 ---
 
 # Scenario: Discount Synchronization to Selected Stores
-
-## Business Entity
-Discount
-
-## Business Purpose
-Ensure that Discounts configured in Central Manager synchronize correctly to stores so that promotional pricing and discount rules apply consistently across the system.
-
-## Trigger
-A user creates or updates a Discount in Central Manager.
 
 ## Preconditions
 - Central and Store synchronization services are active.
@@ -221,21 +138,6 @@ Central Manager → Merchandising → Discounts
 5. Allow synchronization to occur.
 6. Verify the discount exists in store configuration.
 
-## Expected Results
-- Discount is inserted or updated in the selected store(s).
-
 ## Validation Checks
 - Discount rule appears in store configuration.
 - Discount values match Central configuration.
-
-## Pass Criteria
-- Discount rule exists and matches Central.
-
-## Fail Criteria
-- Discount rule missing or incorrect.
-
-## Risks / Assumptions
-- Discounts may depend on item or category synchronization.
-
-## Known Issues / Notes
-- Actual Result observed: Pass insert/update

@@ -14,18 +14,6 @@ Priority: 4
 
 # Scenario: Recall for Return (positive transaction total)
 
-## Business Entity
-
-Return transaction (with positive transaction total - customer owes money)
-
-## Business Purpose
-
-Process a return scenario where the resulting transaction total is positive (customer returns items but also purchases new items of greater value, resulting in net amount owed by customer) and ensure the return is synchronized to Central for accurate reporting and reconciliation.
-
-## Trigger
-
-User recalls a transaction for return in POS and completes a return resulting in a positive transaction total (typically an exchange where new purchase value exceeds return value).
-
 ## Preconditions
 
 - POS is operational and cashier is logged in
@@ -68,40 +56,6 @@ User recalls a transaction for return in POS and completes a return resulting in
 13. If customer wants a receipt, tap **Yes** to print the receipt
 14. Return/exchange transaction is created in Store database and queued for sync to Central
 
-## Expected Synchronization Behavior
-
-- Insert: Insert the return/exchange transaction in Store database and sync/insert the corresponding transaction in Central database (transaction includes both return items and new purchase items)
-- Update: Not applicable (return/exchange creates new transaction; original transaction remains unchanged)
-- Delete: Not applicable (original transaction is not deleted; return/exchange creates separate entry)
-- Matching key: Return/exchange transaction number (unique identifier from Store to Central); Store ID + Transaction number; Transaction references original transaction number for return portion
-
-## Expected Result in Source System
-
-- Return/exchange transaction is created/visible in POS (stored as separate transaction in Store database)
-- Original transaction remains in Store database (unchanged)
-- Transaction total is **positive** in POS (e.g., $25.00 indicates customer owes money)
-- Transaction includes both:
-  - **Return items** (negative line items in red)
-  - **New purchase items** (positive line items in black)
-- Net transaction total = new purchases - returns = **positive value** (customer payment required)
-- Return/exchange transaction appears in Journal (Transaction | Receipt | Journal)
-- Transaction is visible in Store Manager (Journal | Transactions) showing both return and purchase line items
-- Inventory is adjusted:
-  - Returned items: added back to on-hand quantity
-  - New purchase items: subtracted from on-hand quantity
-- Tender shows **customer payment** for net positive amount
-
-## Expected Result in Target System
-
-- Return/exchange transaction is created/visible in Central database after sync
-- Original transaction remains in Central (unchanged)
-- Transaction total is **positive** in Central (matches Store)
-- Transaction includes both return items (negative) and new purchase items (positive)
-- Return/exchange transaction syncs automatically via Central Client
-- Transaction is available for Central Manager reporting
-- Related totals reflect both return and sale in Central reporting
-- Inventory adjustments (both return and purchase) sync to Central
-
 ## Validation Points
 
 - Verify return/exchange transaction exists in POS with positive total
@@ -120,44 +74,3 @@ User recalls a transaction for return in POS and completes a return resulting in
 - Verify tender: customer payment recorded for net positive amount
 - Mapping validation: Transaction fields (Store ID, Transaction number, original transaction reference, return line items, purchase line items, net positive total, tender amount, timestamp) map correctly from Store to Central
 - Duplicate prevention: No duplicate transaction in Central for the same Transaction number
-
-## Negative / Edge Case Coverage
-
-- **Positive total not allowed by configuration:** If store has policies preventing exchanges or requiring separate return/sale transactions, cashier must process return and new sale separately (some stores prefer this for clearer reporting)
-- **Exchange with equal value:** If return value = new purchase value, transaction total is $0.00 (no payment or refund); POS still creates transaction showing both return and purchase
-- **Exchange with return value > purchase value:** Results in **negative** total (customer receives refund); this is the "Recall for Return (negative transaction total)" scenario
-- **Multiple exchanges in one transaction:** Customer can return multiple items and purchase multiple new items in single transaction; POS calculates net total correctly
-- **Return without exchange:** If customer only returns items without purchasing anything new, result is negative total (refund scenario)
-- **POS offline then sync later:** Return/exchange transaction created locally in Store database with both return and purchase line items, then synced to Central when connectivity is restored
-- **Sync failure then retry:** Central Client automatically retries failed sync jobs; verify transaction appears in Central after retry (check Central Client Dashboard for failed jobs)
-- **Duplicate prevention across repeated sync attempts:** Transaction sync is idempotent; repeated sync of same transaction does not create duplicates in Central
-- **Reason code requirement:** If configured for returns, cashier must select reason code before transaction completes
-- **Inventory impact:** Both returned items (added to inventory) and new purchases (subtracted from inventory) are processed correctly
-- **Tender payment:** Customer pays net positive amount; verify payment recorded in X/Z reports
-- **Return Mode alternative:** Customer can also use Return Mode (Transaction | Sale/Return/No Sale | Return) and manually enter returned items (negative quantities) and new purchase items (negative quantities in return mode = outgoing items)
-- **Consistency Checker:** If transaction fails to sync, run Consistency Checker to synchronize missing records to Central
-- **User permission for return/void:** Starting with release 3.10.5, "Do not allow to return or void entries from transaction" option prevents users from processing returns/exchanges
-
-## Known Issues / Notes
-
-- Video link: https://somup.com/cOnbQRWtKa
-- Reference: RMH documentation - [Processing returns](https://github.com/rmhpos/gitbook-repo/blob/main/docs/POS_UG_Topics/processing-returns.md)
-- Reference: RMH documentation - [Processing exchanges](https://github.com/rmhpos/gitbook-repo/blob/main/docs/POS_UG_Topics/processing-exchanges.md)
-- **Positive transaction total:** Indicates customer **owes money**; typically occurs in exchange scenarios where new purchase > return
-- **Return/exchange transaction:** Single transaction containing both return items (negative) and new purchase items (positive)
-- **Net total calculation:** New purchases - returns = positive amount (customer payment required)
-- **Returned items in red, new items in black:** POS color-codes to distinguish return vs. purchase
-- **Exchange scenarios:**
-  - **Positive total:** New purchase > return (customer owes difference)
-  - **Zero total:** New purchase = return (no payment/refund)
-  - **Negative total:** New purchase < return (customer receives refund)
-- **Return Mode alternative:** For exchanges, cashier can use Return Mode:
-  - Enter returned item with **positive quantity** (in return mode, positive = incoming)
-  - Enter new purchase item with **negative quantity** (in return mode, negative = outgoing)
-  - Result: Same net positive total if new purchase > return
-- **Inventory impact:** Dual adjustment (returned items +, new purchases -)
-- **Single vs. separate transactions:** Some stores prefer separate return transaction + new sale transaction for clearer reporting; RMH supports both approaches
-- **POS command available:** `Transaction_RecallForReturnCommand` initiates recall for return process
-- **Reason codes optional:** Configured in File | Configuration | Store Rules | Reason Code Options
-- **User permission:** Release 3.10.5 added "Do not allow to return or void entries from transaction" option to restrict return/exchange access
-- **Receipt shows both:** Return/exchange receipt displays both returned items (negative) and new purchases (positive) with net total

@@ -14,18 +14,6 @@ Priority: 5
 
 # Scenario: Pick up Quote
 
-## Business Entity
-
-Quote transaction (converted to sale)
-
-## Business Purpose
-
-Convert previously created quotes to actual sales when customers decide to purchase, allowing customers to buy items at the quoted price within the quote expiration period and completing the transaction with payment and inventory adjustment.
-
-## Trigger
-
-Customer returns to store to purchase items from a previously created quote; user recalls the quote in POS and processes it as a sale (Pick up Entire).
-
 ## Preconditions
 
 - POS is operational and cashier is logged in
@@ -101,43 +89,6 @@ Customer returns to store to purchase items from a previously created quote; use
 **Alternative: Use POS command**
 - Can use `Quote_RecallCommand` to invoke Recall Quote dialog (no parameters)
 
-## Expected Synchronization Behavior
-
-- Insert: Insert the sale transaction (converted from quote) in Store database and sync/insert to Central database
-- Update: Quote status is updated in Store (converted to sale) and synced to Central
-- Delete: Not applicable (quotes are not deleted; status updated to completed)
-- Matching key: Quote number + Sale transaction number; Store ID + Quote number
-
-## Expected Result in Source System
-
-- Quote is recalled successfully in POS
-- **Sale transaction is created/visible** in POS (Store database)
-- **Quote status updated:**
-  - Status changed to "completed/converted to sale"
-  - Quote no longer appears in open quotes list
-- Sale transaction details captured:
-  - Items from quote (quantities, prices)
-  - Payment amount (full quote total)
-  - Link to original quote number
-- Sale transaction appears in Journal (Transaction | Receipt | Journal)
-- Sale is visible in Store Manager (Journal | Transactions)
-- Receipt prints showing sale details and original quote reference
-- **Inventory adjusted:**
-  - Items subtracted from On-Hand quantity
-  - Regular sale inventory adjustment applied
-- Payment recorded in batch totals
-
-## Expected Result in Target System
-
-- Quote status update syncs to Central database (converted to sale)
-- Sale transaction syncs to Central
-- Quote in Central reflects:
-  - Updated status (completed/converted)
-  - Link to sale transaction
-  - Conversion date
-- Sale transaction available in Central Manager for reporting
-- Inventory adjustment syncs to Central
-
 ## Validation Points
 
 - Verify quote recalls successfully in POS
@@ -155,53 +106,3 @@ Customer returns to store to purchase items from a previously created quote; use
 - Verify payment recorded in batch totals
 - Mapping validation: Quote conversion, sale details, inventory updates map correctly from Store to Central
 - Duplicate prevention: No duplicate sale transactions in Central
-
-## Negative / Edge Case Coverage
-
-- **Quote not found:** If quote does not exist or is already processed, POS prevents recall; verify validation
-- **Customer filtering:** If customer selected but has no open quotes, recall screen shows "no quotes found"; verify message
-- **All open quotes display:** If no customer selected, all open quotes display; cashier must search manually; verify full list accessibility
-- **Multiple quotes for same customer:** Customer can have multiple open quotes; verify correct one can be selected
-- **Quote expired:** If quote is past expiration date, store policy determines if quoted price is still honored; verify expiration handling
-- **Prices changed after quote:** If item prices increased after quote was created, customer should still pay quoted price (within expiration); verify quoted price is honored
-- **Items out of stock:** If items on quote are now out of stock, cashier cannot complete pick up entire; may need to create back order or partial quote; verify inventory validation
-- **Discounts on quote:** If quote included discounts, discounts should be honored when converting to sale; verify discounts are applied
-- **Payment declined:** If payment is declined, quote should not convert to sale; verify rollback
-- **Quote recall then cancel:** If cashier recalls quote but cancels before completing tender, quote remains in open status; verify no sale created
-- **Partial quote processing:** RMH documentation only shows "Pick up Entire" for quotes (no "Pick up Partial" option); if customer wants only some items, may need to create new transaction or modify quote
-- **Convert to sale vs. convert to work order:** Customer chooses "Pick up Entire" to buy immediately; "Convert to Work Order" is different workflow; verify correct action selected
-- **Quote history view:** Order Details | Order History may show quote creation transaction; verify quote history accessible
-- **POS offline then sync later:** Quote conversion to sale created locally in Store database, then synced to Central when connectivity is restored
-- **Sync failure then retry:** Central Client automatically retries failed sync jobs; verify sale and quote status update appear in Central after retry
-- **Duplicate prevention across repeated sync attempts:** Sale sync is idempotent; repeated sync does not create duplicates in Central
-- **Consistency Checker:** If quote conversion or sale fails to sync, run Consistency Checker to synchronize missing records to Central
-
-## Known Issues / Notes
-
-- Video link: https://somup.com/cOeh22WPZM
-- Reference: RMH documentation - [Processing quotes](https://github.com/rmhpos/gitbook-repo/blob/main/docs/POS_UG_Topics/quotes-processing.md)
-- Reference: RMH documentation - [Creating quotes](https://github.com/rmhpos/gitbook-repo/blob/main/docs/POS_UG_Topics/quotes-creating.md)
-- **Recall access:** Orders | Recalls | Recall a Quote
-- **POS command available:** `Quote_RecallCommand` - Invokes Recall Quote dialog (no parameters)
-- **Customer selection recommended:** Selecting customer before recalling quote filters list to only that customer's quotes
-- **Pick up Entire = Convert to Sale:** "Pick up Entire" converts quote to actual sale; customer pays and takes items immediately
-- **Payment required:** Unlike quote creation (Total Due $0), customer must pay full quoted amount when picking up quote
-- **Quoted price honored:** Customer pays prices from original quote (including any discounts/price changes), not current prices
-- **Expiration date:** Quote should be processed before expiration; after expiration, store policy determines if quoted price is honored
-- **Inventory adjustment timing:** Inventory is adjusted when quote is picked up (converted to sale), not when quote was created
-- **Quote lifecycle:**
-  1. **Create:** Quote created with items and pricing; no payment; no inventory impact
-  2. **Review:** Customer reviews quote and decides to purchase
-  3. **Recall:** Customer returns; cashier recalls quote (this scenario)
-  4. **Pick up Entire:** Quote converts to sale; customer pays; inventory adjusted
-  5. **Complete:** Quote closes; sale transaction created
-- **Quote vs. sale:**
-  - **Quote creation:** Total Due $0; no payment; no inventory adjustment
-  - **Quote pickup (this scenario):** Total Due = quote amount; payment required; inventory adjusted
-- **Pick up options for quotes:**
-  1. **Pick up Entire:** Convert to sale (this scenario)
-  2. **Convert to Work Order:** Convert to work order (next scenario)
-  - **No "Pick up Partial" option** for quotes (unlike work orders/layaways)
-- **Store policy - expired quotes:** Store determines if expired quotes are honored at quoted price or if current pricing applies
-- **Common workflow:** Customer gets quote → reviews pricing → decides to purchase → returns to store → cashier recalls quote → selects Pick up Entire → customer pays → sale completes
-- **Use case:** Customer wanted price estimate before committing; quote showed pricing; customer now ready to buy

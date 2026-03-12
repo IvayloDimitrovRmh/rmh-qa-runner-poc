@@ -14,18 +14,6 @@ Priority: 8
 
 # Scenario: Sale by changing TAX
 
-## Business Entity
-
-Sale transaction (with tax change/modification)
-
-## Business Purpose
-
-Process sales where the cashier changes or modifies the tax schedule during the transaction (e.g., changing from local tax to out-of-state tax, or applying different tax rate) and ensure the transaction with modified tax calculation is synchronized to Central for accurate reporting and compliance.
-
-## Trigger
-
-User completes a sale in POS where tax is changed/modified from the default tax schedule for specific items or the entire transaction.
-
 ## Preconditions
 
 - POS is operational and cashier is logged in
@@ -81,45 +69,6 @@ User completes a sale in POS where tax is changed/modified from the default tax 
 10. Enter payment amount and complete tender
 11. Receipt prints showing modified tax for entire transaction
 
-## Expected Synchronization Behavior
-
-- Insert: Insert the sale transaction in Store database and sync/insert the corresponding transaction in Central database
-- Update: Not applicable (sale creates new transaction; not updated)
-- Delete: Not applicable (sales are not deleted; voids create reversing transactions)
-- Matching key: Transaction number (unique identifier from Store to Central); Store ID + Transaction number
-
-## Expected Result in Source System
-
-- Sale transaction is created/visible in POS (Store database)
-- **Modified tax schedule is applied** and visible:
-  - Item(s) show changed tax schedule (not default tax)
-  - Tax amount calculated using modified tax schedule
-  - Reason code (if provided) displays below item or transaction
-- Transaction appears in Journal (Transaction | Receipt | Journal) with modified tax details
-- Transaction is visible in Store Manager (Journal | Transactions) showing:
-  - Line items with tax schedules
-  - Modified tax information
-  - Reason code (if provided)
-- Receipt shows:
-  - Items with quantities
-  - Tax breakdown (may show which tax schedule was applied)
-  - Total amount
-  - Reason code (if configured in receipt template)
-- Inventory is adjusted (items subtracted from on-hand quantity)
-- Tender amounts are recorded (customer pays total including modified tax)
-
-## Expected Result in Target System
-
-- Sale transaction is created/visible in Central database after sync
-- **Modified tax details are reflected in Central:**
-  - Transaction includes tax schedule changes
-  - Tax amount calculated using modified tax schedule
-  - Reason code preserved
-- Transaction syncs automatically via Central Client
-- Transaction is available for Central Manager reporting
-- Tax compliance reports show transaction with correct tax schedule (not default)
-- Tax remittance reports use modified tax amounts
-
 ## Validation Points
 
 - Verify sale transaction exists in POS with changed tax
@@ -133,58 +82,3 @@ User completes a sale in POS where tax is changed/modified from the default tax 
 - Verify reason code preserved in Central
 - Mapping validation: Tax change fields (modified tax schedule ID, tax amount, reason code) map correctly from Store to Central
 - Duplicate prevention: No duplicate sale in Central for the same Transaction number
-
-## Negative / Edge Case Coverage
-
-- **Tax change without permission:** If user does not have "Allowed to change tax status" permission, POS prevents tax change; verify permission enforcement
-- **Tax change without reason code:** If reason code is required (File | Configuration | Store Rules | Reason Code Options), cashier must select reason before tax change completes
-- **Invalid tax schedule selected:** If cashier selects invalid or inactive tax schedule, POS may show error or prevent selection; verify tax schedule validation
-- **Change tax after discount applied:** If item has discount applied, then tax is changed, POS recalculates tax on discounted price; verify correct calculation order
-- **Change tax multiple times:** Cashier can change tax multiple times for same item; latest change is applied; verify only final tax change is recorded
-- **Mix of default and changed tax:** Transaction can have some items with default tax and some with changed tax; POS calculates each item separately; verify correct per-item tax calculation
-- **Change tax then void transaction:** If transaction with changed tax is voided, tax change is reversed; verify void processing handles tax change correctly
-- **Tax-exempt customer with tax change:** If tax-exempt customer is selected, tax change may not apply (customer is exempt regardless of tax schedule); verify tax-exempt status takes precedence
-- **Destination tax vs. manual tax change:** If destination tax is enabled (release 3.50.11) and shipping address is selected, manual tax change may override destination tax; verify precedence
-- **Tax change for non-taxable item:** If item is marked "Item is not taxable," tax change may not apply; verify non-taxable items remain non-taxable
-- **POS offline then sync later:** Sale with changed tax created locally in Store database, then synced to Central when connectivity is restored; tax change details preserved
-- **Sync failure then retry:** Central Client automatically retries failed sync jobs; verify sale with changed tax appears in Central after retry (check Central Client Dashboard for failed jobs)
-- **Duplicate prevention across repeated sync attempts:** Sale sync is idempotent; repeated sync does not create duplicates in Central
-- **Tax compliance reporting:** Transactions with changed tax must be accurately reported for tax remittance; verify tax reports use modified tax amounts, not default
-- **Audit trail:** Tax change with reason code provides audit trail for compliance; verify reason codes are captured for reporting
-- **Consistency Checker:** If sale transaction with changed tax fails to sync, run Consistency Checker to synchronize missing sale records to Central
-
-## Known Issues / Notes
-
-- Video link: https://somup.com/cOnZtWHBG
-- Reference: RMH documentation - [Working with taxes](https://github.com/rmhpos/gitbook-repo/blob/main/docs/POS_UG_Topics/transactions-working-with-taxes.md)
-- Reference: RMH documentation - [Setting up sales tax rules](https://github.com/rmhpos/gitbook-repo/blob/main/docs/SM_GSG_Topics/setting-up-sales-tax-rules.md)
-- Reference: RMH documentation - [Transaction policies](https://github.com/rmhpos/gitbook-repo/blob/main/docs/POS_UG_Topics/policies-transactions.md)
-- **Permission required:** "Allowed to change tax status" (Setup | People & Security | Users | General tab | POS User Roles)
-- **Two methods for changing tax:**
-  1. **Specific item:** Taxes | Current Item Tax | Set Current Item Tax
-  2. **Entire transaction:** Taxes | Transaction Tax | Set Transaction Tax
-- **Action button alternative:** Can use Action button beside item to access Tax change (if enabled)
-- **Reason codes optional:** Store can configure reason codes for tax changes (File | Configuration | Store Rules | Reason Code Options)
-- **Common tax change scenarios:**
-  - **Out-of-state shipping:** Change from local tax to destination state tax
-  - **International shipping:** Change to international tax or no tax
-  - **Wholesale transaction:** Change from retail tax to wholesale tax (lower rate or exempt)
-  - **Government purchase:** Change to tax-exempt schedule
-  - **Different jurisdiction:** Change tax when item ships to different tax jurisdiction
-- **Tax schedule configuration:** Multiple tax schedules can be configured in Store Manager (File | Configuration | Sales Tax) for different jurisdictions, rates, or purposes
-- **Destination tax feature:** Starting with release 3.50.11, POS can automatically apply destination tax based on shipping address; manual tax change can override this
-- **Tax change vs. tax removal:** 
-  - **Tax change:** Switch from one tax schedule to another (different rate)
-  - **Tax removal:** Remove tax entirely (set to no tax/0%)
-- **Tax vs. tax-exempt customer:**
-  - **Tax change:** Manual modification of tax schedule for transaction
-  - **Tax-exempt customer:** Customer profile marked exempt; automatic exemption
-- **Audit and compliance:** Tax changes with reason codes provide audit trail for tax compliance and reporting
-- **Receipt display:** Receipt can show reason code for tax change (if configured in receipt template)
-- **POS commands available:**
-  - `ItemTax_SetForCurrentItemCommand` - Invoke Select Tax dialog for current item
-  - `ItemTax_SetForTransactionCommand` - Invoke Select Tax dialog for transaction
-  - `ItemTax_ToggleForItemCommand` - Toggle item tax on/off for selected item
-  - `ItemTax_ToggleForTransactionCommand` - Toggle transaction tax on/off
-  - `ItemTax_SetDestinationTaxCommand` - Apply destination tax based on shipping address
-  - `ItemTax_SetNoItemTaxForTransactionCommand` - Make transaction tax-free

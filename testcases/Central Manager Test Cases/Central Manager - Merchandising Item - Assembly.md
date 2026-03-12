@@ -13,15 +13,6 @@ Priority: Unknown
 
 # Scenario: Items - Assembly Item Synchronization to Selected Stores
 
-## Business Entity
-Assembly Item
-
-## Business Purpose
-Ensure that Assembly Items created or updated in Central Manager synchronize correctly to the selected Store Groups so that items built from component inventory are consistently configured and available across stores.
-
-## Trigger
-A user creates or updates an Assembly Item in Central Manager and assigns it to one or more Store Groups.
-
 ## Preconditions
 - Central and Store synchronization services are active.
 - At least one Store Group exists.
@@ -52,32 +43,9 @@ Central Manager → Merchandising → Items
 7. Allow synchronization to occur.
 8. Verify the assembly item appears in the assigned store(s).
 
-## Expected Results
-- Assembly Item is inserted or updated in the selected store(s).
-- Assembly structure and component items are preserved in the store.
-- Item data matches the configuration from Central Manager.
-
 ## Validation Checks
 - Assembly item appears in the store item list.
 - Lookup Code and Description match Central.
 - Component items and quantities match Central configuration.
 - Pricing and cost values match Central.
 - Store Group assignment correctly determines which stores receive the item.
-
-## Pass Criteria
-- Assembly item is successfully inserted or updated in the selected store(s).
-- Assembly structure and item data match between Central and Store.
-
-## Fail Criteria
-- Assembly item does not appear in the store.
-- Component items are missing or incorrect.
-- Item data differs between Central and Store.
-- Synchronization produces duplicate or incomplete records.
-
-## Risks / Assumptions
-- Component items must already exist and be synchronized before creating the assembly item.
-- Synchronization timing may depend on configured sync intervals.
-- Store must belong to the assigned Store Group to receive the item.
-
-## Known Issues / Notes
-- Actual Result observed: Pass insert/update

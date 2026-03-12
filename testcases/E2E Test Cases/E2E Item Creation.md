@@ -11,12 +11,6 @@ Automation Candidate: Yes
 
 # Test Case: Create Standard Item with VAT Tax (No Sale Pricing, Discount, or Commission)
 
-## Business Entity
-Items
-
-## Test Objective
-Validate that creating a Standard Item in Central with VAT tax and assigning it to a store group synchronizes correctly to POS.
-
 ## Preconditions
 - Central Manager and POS are operational.
 - Department `AutoDepartmentName01` exists.
@@ -36,30 +30,15 @@ Validate that creating a Standard Item in Central with VAT tax and assigning it 
 4. Save the item.
 5. In **POS**, search the item using the **Lookup Code**.
 
-## Expected Result
-- Item is created successfully in Central.
-- Item is synchronized to the store.
-- Item appears in POS lookup results.
-
 ## Validation Points
 - Lookup Code matches between Central and POS.
 - Department and Category are correct.
 - Price and Cost values are correct.
 - VAT tax is applied.
 
-## Negative / Edge Case Coverage
-- Missing required fields prevents creation.
-- Item should not appear in POS before synchronization.
-
 ---
 
 # Test Case: Edit Standard Item with VAT Tax
-
-## Business Entity
-Items
-
-## Test Objective
-Validate that updating an existing Standard Item in Central synchronizes the updated data to POS.
 
 ## Preconditions
 - Item `AutoLCode03` already exists.
@@ -76,11 +55,6 @@ Validate that updating an existing Standard Item in Central synchronizes the upd
    - Price and Cost
 3. Save the item.
 4. In **POS**, search using the **updated Lookup Code**.
-
-## Expected Result
-- Item is updated successfully in Central.
-- Updated item data is synchronized to the store.
-- POS displays the updated item information.
 
 ## Validation Points
 - Updated Lookup Code is searchable in POS.

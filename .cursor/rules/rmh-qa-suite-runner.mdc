@@ -1,0 +1,32 @@
+---
+description: RMH QA suite runner project rules
+alwaysApply: true
+---
+
+This repository is an internal RMH QA tool.
+
+Core behavior:
+- Markdown files in /testcases are the source of truth
+- Only scan /testcases
+- Include only files whose filename contains the exact suite name string, case-sensitive
+- Test cases are split by the exact marker: # Scenario:
+- Each scenario is exactly one test case
+- Never merge scenarios
+- Never deduplicate scenarios
+- Preserve file order and scenario order
+
+Technical rules:
+- Use Next.js App Router
+- Use TypeScript
+- Use Tailwind for styling
+- Use Node fs and path for file access
+- Avoid unnecessary external libraries
+- Prefer simple deterministic logic over abstractions
+- Do not add a database
+- Do not add auth
+- Do not add persistence unless explicitly requested
+
+Coding rules:
+- Keep code readable
+- Do not modify unrelated files
+- Explain the plan briefly before coding

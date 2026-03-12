@@ -1,5 +1,6 @@
 import path from "path";
 import type { TestCaseDefinition, GeneratedSuite } from "./types";
+import { loadIndex, filterIndexBySearchText } from "./indexLoader";
 import { discoverTestFiles } from "./fileDiscovery";
 import { parseScenarios } from "./scenarioParser";
 
@@ -15,10 +16,9 @@ function extractTestCaseName(scenarioContent: string, fallbackId: string): strin
 }
 
 /**
- * Builds a GeneratedSuite: discovers files by search text, parses scenarios, assigns T01, T02, ...
- * testCaseName = first non-empty line after "# Scenario:", else test ID.
+ * Builds a suite from markdown files (fallback when index is missing or empty).
  */
-export function buildSuite(searchText: string): GeneratedSuite {
+export function buildSuiteFromMarkdown(searchText: string): GeneratedSuite {
   const absolutePaths = discoverTestFiles(searchText);
   const sourceFiles = absolutePaths.map((p) => path.basename(p));
   const testCases: TestCaseDefinition[] = [];
@@ -44,4 +44,35 @@ export function buildSuite(searchText: string): GeneratedSuite {
     sourceFiles,
     testCases,
   };
+}
+
+/**
+ * Builds a GeneratedSuite from the precomputed JSON index when available;
+ * otherwise falls back to scanning and parsing markdown files.
+ */
+export function buildSuite(searchText: string): GeneratedSuite {
+  const index = loadIndex();
+  if (index.length > 0) {
+    const filtered = filterIndexBySearchText(index, searchText);
+    const sourceFilesSeen = new Set<string>();
+    const sourceFiles: string[] = [];
+    for (const r of filtered) {
+      if (!sourceFilesSeen.has(r.fileName)) {
+        sourceFilesSeen.add(r.fileName);
+        sourceFiles.push(r.fileName);
+      }
+    }
+    const testCases: TestCaseDefinition[] = filtered.map((r) => ({
+      id: r.testId,
+      testCaseName: r.testCaseName,
+      sourceFile: r.sourceFile,
+      scenarioContent: r.scenarioContent,
+    }));
+    return {
+      suiteName: searchText,
+      sourceFiles,
+      testCases,
+    };
+  }
+  return buildSuiteFromMarkdown(searchText);
 }

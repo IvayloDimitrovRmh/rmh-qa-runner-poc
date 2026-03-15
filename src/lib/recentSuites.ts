@@ -110,3 +110,41 @@ export function clearRecentSuites(): void {
     // ignore
   }
 }
+
+function arraysEqual(a: string[], b: string[]): boolean {
+  if (a.length !== b.length) return false;
+  const sa = [...a].sort();
+  const sb = [...b].sort();
+  return sa.every((p, i) => p === sb[i]);
+}
+
+/**
+ * Updates the display title of a recent suite entry that matches the current suite.
+ * Call this when the user edits the suite title on the execution page.
+ * Matches tree entries by sourceFiles; matches import entries by original suiteName + testCount.
+ */
+export function updateRecentSuiteTitle(
+  suite: { sourceFiles: string[]; suiteName: string; testCount: number },
+  newTitle: string
+): void {
+  const trimmed = newTitle.trim();
+  if (!trimmed) return;
+  const list = loadRaw();
+  let updated = false;
+  const next = list.map((e) => {
+    if (e.source === "tree" && arraysEqual(e.sourceFiles, suite.sourceFiles)) {
+      updated = true;
+      return { ...e, suiteName: trimmed };
+    }
+    if (
+      e.source === "import" &&
+      e.payload.suiteName === suite.suiteName &&
+      e.testCount === suite.testCount
+    ) {
+      updated = true;
+      return { ...e, suiteName: trimmed };
+    }
+    return e;
+  });
+  if (updated) save(next);
+}

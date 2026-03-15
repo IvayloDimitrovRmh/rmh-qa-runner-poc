@@ -285,7 +285,13 @@ export default function Home() {
               </div>
             </div>
             <ul className="space-y-3">
-              {recentSuites.map((entry, index) => (
+              {recentSuites.map((entry, index) => {
+                const displayName =
+                  entry.suiteName?.trim() ||
+                  (entry.source === "tree"
+                    ? `Selected (${entry.sourceFiles.length} file${entry.sourceFiles.length === 1 ? "" : "s"})`
+                    : (entry.payload?.suiteName?.trim() ?? "Imported suite"));
+                return (
                 <li
                   key={`${entry.source}-${entry.openedAt}-${index}`}
                   className="flex flex-wrap items-center gap-3 rounded-lg border border-slate-100 bg-slate-50/50 p-3 transition-colors hover:bg-slate-50"
@@ -300,7 +306,7 @@ export default function Home() {
                     <span className="sr-only">Select for remove</span>
                   </label>
                   <div className="min-w-0 flex-1">
-                    <p className="font-medium text-slate-900">{entry.suiteName}</p>
+                    <p className="font-medium text-slate-900">{displayName}</p>
                     <p className="text-sm text-slate-500">
                       {entry.source === "tree"
                         ? `${entry.sourceFiles.length} file${entry.sourceFiles.length === 1 ? "" : "s"} · ${entry.testCount} test${entry.testCount === 1 ? "" : "s"}`
@@ -329,7 +335,8 @@ export default function Home() {
                     </button>
                   </div>
                 </li>
-              ))}
+              );
+              })}
             </ul>
           </section>
         )}

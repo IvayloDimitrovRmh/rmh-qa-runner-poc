@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { buildSuiteFromIndexAndSelectedFiles } from "@/src/lib/suiteFromSelection";
 import type { TestCaseIndexRecord, GeneratedSuite } from "@/src/lib/types";
 import { SELECTED_FILES_KEY } from "@/src/lib/treeStorageKeys";
+import { getStoredDisplayTitle } from "@/src/lib/progressStorage";
 import { addRecentSuite } from "@/src/lib/recentSuites";
 import SuiteExecutionDashboard from "./SuiteExecutionDashboard";
 
@@ -40,9 +41,11 @@ export default function TreeSuiteLoader() {
         );
         setSuite(generated);
         setError(null);
+        const displayTitle =
+          getStoredDisplayTitle(generated.suiteName) ?? generated.suiteName;
         addRecentSuite({
           source: "tree",
-          suiteName: generated.suiteName,
+          suiteName: displayTitle,
           sourceFiles: generated.sourceFiles,
           testCount: generated.testCases.length,
           openedAt: new Date().toISOString(),

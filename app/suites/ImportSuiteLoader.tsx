@@ -11,6 +11,7 @@ import {
   type ExportedProgress,
   type ImportableTestCase,
 } from "@/src/lib/progressImport";
+import { getStoredDisplayTitle } from "@/src/lib/progressStorage";
 import { addRecentSuite } from "@/src/lib/recentSuites";
 import SuiteExecutionDashboard from "./SuiteExecutionDashboard";
 
@@ -62,9 +63,10 @@ export default function ImportSuiteLoader() {
         setSuite(built);
         setError(null);
         const canonical = buildCanonicalImportPayload(data);
+        const displayTitle = getStoredDisplayTitle(data.suiteName) ?? data.suiteName;
         addRecentSuite({
           source: "import",
-          suiteName: data.suiteName,
+          suiteName: displayTitle,
           testCount: built.testCases.length,
           fileCount: built.sourceFiles.length,
           openedAt: new Date().toISOString(),
@@ -96,9 +98,11 @@ export default function ImportSuiteLoader() {
           setSuite(withName);
           setError(null);
           const canonical = buildCanonicalImportPayload(data);
+          const displayTitle =
+            getStoredDisplayTitle(data.suiteName) ?? data.suiteName;
           addRecentSuite({
             source: "import",
-            suiteName: data.suiteName,
+            suiteName: displayTitle,
             testCount: withName.testCases.length,
             fileCount: withName.sourceFiles.length,
             openedAt: new Date().toISOString(),

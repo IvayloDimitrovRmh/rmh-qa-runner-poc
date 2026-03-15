@@ -3,6 +3,7 @@
 import { useState, useCallback, useEffect, useRef } from "react";
 import type { GeneratedSuite, TestCaseDefinition } from "@/src/lib/types";
 import { getStorageKey } from "@/src/lib/progressStorage";
+import { updateRecentSuiteTitle } from "@/src/lib/recentSuites";
 import {
   ExportedProgress,
   extractExecutionStateFromHtml,
@@ -1752,6 +1753,23 @@ export default function SuiteExecutionDashboard({ suite }: { suite: GeneratedSui
     // Persist execution state and display title; key is suite.suiteName
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [executionByTestId, displayTitle]);
+
+  useEffect(() => {
+    if (displayTitle === suite.suiteName) return;
+    updateRecentSuiteTitle(
+      {
+        sourceFiles: suite.sourceFiles,
+        suiteName: suite.suiteName,
+        testCount: suite.testCases.length,
+      },
+      displayTitle
+    );
+  }, [
+    displayTitle,
+    suite.suiteName,
+    suite.sourceFiles,
+    suite.testCases.length,
+  ]);
 
   const updateExecution = useCallback((next: ExecutionState) => {
     setExecutionByTestId((prev) => ({ ...prev, [next.testId]: next }));

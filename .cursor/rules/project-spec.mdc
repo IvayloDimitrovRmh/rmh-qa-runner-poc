@@ -1,0 +1,11 @@
+---
+alwaysApply: true
+---
+
+Always follow the project specification located at:
+
+docs/RMH_QA_SUITE_RUNNER_REQUIREMENTS.md
+
+When generating code, implementing features, or refactoring,
+the architecture, functional requirements, and development plan
+defined in that document must be respected.

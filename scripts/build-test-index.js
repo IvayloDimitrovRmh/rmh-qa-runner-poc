@@ -5,6 +5,8 @@ const path = require("path");
 
 const TESTCASES_DIR = "testcases";
 const SCENARIO_MARKER = "# Scenario:";
+const TEST_CASE_MARKER = "# Test Case:";
+const SCENARIO_OR_TEST_CASE = /# (Scenario|Test Case):/g;
 const INDEX_PATH = path.join(process.cwd(), "public", "testcase-index.json");
 
 function extractTestCaseName(scenarioContent, fallbackId) {
@@ -15,15 +17,26 @@ function extractTestCaseName(scenarioContent, fallbackId) {
     const after = trimmed.slice(SCENARIO_MARKER.length).trim();
     return after || fallbackId;
   }
+  if (trimmed.startsWith(TEST_CASE_MARKER)) {
+    const after = trimmed.slice(TEST_CASE_MARKER.length).trim();
+    return after || fallbackId;
+  }
   return trimmed || fallbackId;
 }
 
+/**
+ * Splits content by "# Scenario:" or "# Test Case:" and returns array of scenario blocks
+ * (each block includes the marker so content is self-describing).
+ */
 function parseScenarios(content) {
-  const parts = content.split(SCENARIO_MARKER);
+  const parts = content.split(SCENARIO_OR_TEST_CASE);
+  if (parts.length <= 1) return [];
   const scenarios = [];
-  for (let i = 1; i < parts.length; i++) {
-    const block = parts[i].trim();
-    scenarios.push(SCENARIO_MARKER + (block ? "\n\n" + block : ""));
+  for (let i = 1; i < parts.length - 1; i += 2) {
+    const marker = parts[i]; // "Scenario" or "Test Case"
+    const fullMarker = marker === "Scenario" ? SCENARIO_MARKER : TEST_CASE_MARKER;
+    const block = (parts[i + 1] || "").trim();
+    scenarios.push(fullMarker + (block ? "\n\n" + block : ""));
   }
   return scenarios;
 }
@@ -64,6 +77,7 @@ function buildIndex() {
     const content = fs.readFileSync(filePath, "utf-8");
     const scenarios = parseScenarios(content);
 
+    const basename = path.basename(rel);
     for (const scenarioContent of scenarios) {
       const testId = "T" + String(counter).padStart(2, "0");
       records.push({
@@ -71,7 +85,8 @@ function buildIndex() {
         testCaseName: extractTestCaseName(scenarioContent, testId),
         sourceFile: rel,
         scenarioContent,
-        fileName: rel,
+        fileName: basename,
+        relativePath: rel,
       });
       counter++;
     }

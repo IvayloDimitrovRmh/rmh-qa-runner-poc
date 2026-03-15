@@ -2,6 +2,7 @@ import path from "path";
 import type { TestCaseDefinition, GeneratedSuite } from "./types";
 import { loadIndex, filterIndexBySearchText } from "./indexLoader";
 import { discoverTestFiles } from "./fileDiscovery";
+import { buildSuiteFromIndexAndSelectedFiles } from "./suiteFromSelection";
 import { parseScenarios } from "./scenarioParser";
 
 function extractTestCaseName(scenarioContent: string, fallbackId: string): string {
@@ -10,6 +11,10 @@ function extractTestCaseName(scenarioContent: string, fallbackId: string): strin
   const trimmed = firstLine.trim();
   if (trimmed.startsWith("# Scenario:")) {
     const after = trimmed.slice("# Scenario:".length).trim();
+    return after || fallbackId;
+  }
+  if (trimmed.startsWith("# Test Case:")) {
+    const after = trimmed.slice("# Test Case:".length).trim();
     return after || fallbackId;
   }
   return trimmed || fallbackId;
@@ -86,3 +91,5 @@ export function buildSuite(searchText: string): GeneratedSuite {
   }
   return buildSuiteFromMarkdown(searchText);
 }
+
+export { buildSuiteFromIndexAndSelectedFiles } from "./suiteFromSelection";

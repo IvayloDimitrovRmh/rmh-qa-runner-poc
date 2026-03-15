@@ -1,27 +1,65 @@
 import { buildSuite } from "@/src/lib/suiteBuilder";
 import SuiteExecutionDashboard from "./SuiteExecutionDashboard";
+import TreeSuiteLoader from "./TreeSuiteLoader";
+import ImportSuiteLoader from "./ImportSuiteLoader";
 
 interface PageProps {
-  searchParams: Promise<{ name?: string }>;
+  searchParams: Promise<{ name?: string; source?: string }>;
 }
 
 export default async function SuitesPage({ searchParams }: PageProps) {
-  const { name } = await searchParams;
+  const { name, source } = await searchParams;
   const searchText = (name ?? "").trim();
+  const fromTree = source === "tree";
+  const fromImport = source === "import";
+
+  if (fromTree) {
+    return (
+      <div className="min-h-screen bg-slate-50 px-4 py-8">
+        <div className="mx-auto max-w-4xl">
+          <header className="mb-8">
+            <h1 className="text-2xl font-semibold text-slate-900">
+              RMH QA Suite Runner
+            </h1>
+            <a href="/" className="mt-2 inline-block text-sm font-medium text-slate-600 hover:text-blue-600 hover:underline">
+              ← Back to home
+            </a>
+          </header>
+          <TreeSuiteLoader />
+        </div>
+      </div>
+    );
+  }
+
+  if (fromImport) {
+    return (
+      <div className="min-h-screen bg-slate-50 px-4 py-8">
+        <div className="mx-auto max-w-4xl">
+          <header className="mb-8">
+            <h1 className="text-2xl font-semibold text-slate-900">
+              RMH QA Suite Runner
+            </h1>
+            <a href="/" className="mt-2 inline-block text-sm font-medium text-slate-600 hover:text-blue-600 hover:underline">
+              ← Back to home
+            </a>
+          </header>
+          <ImportSuiteLoader />
+        </div>
+      </div>
+    );
+  }
 
   if (!searchText) {
     return (
-      <div className="min-h-screen bg-zinc-50 px-4 py-8 dark:bg-zinc-950">
-        <div className="mx-auto max-w-2xl rounded-lg border border-amber-200 bg-amber-50 p-6 dark:border-amber-800 dark:bg-amber-950/30">
-          <h1 className="text-xl font-semibold text-amber-800 dark:text-amber-200">
+      <div className="min-h-screen bg-slate-50 px-4 py-8">
+        <div className="mx-auto max-w-2xl rounded-xl border border-amber-200 bg-amber-50/80 p-6 shadow-sm">
+          <h1 className="text-xl font-semibold text-amber-900">
             RMH QA Suite Runner
           </h1>
-          <p className="mt-2 text-amber-700 dark:text-amber-300">
-            No search text provided. Enter suite name or search text on the{" "}
-            <a href="/" className="underline">
-              home page
-            </a>
-            .
+          <p className="mt-2 text-sm text-amber-800">
+            Select folders and files on the{" "}
+            <a href="/" className="font-medium underline hover:no-underline">home page</a>
+            {" "}and click Load Selected Tests, or import a saved progress file (JSON or HTML).
           </p>
         </div>
       </div>
@@ -31,23 +69,25 @@ export default async function SuitesPage({ searchParams }: PageProps) {
   const suite = buildSuite(searchText);
 
   return (
-    <div className="min-h-screen bg-zinc-50 px-4 py-8 dark:bg-zinc-950">
+    <div className="min-h-screen bg-slate-50 px-4 py-8">
       <div className="mx-auto max-w-4xl">
         <header className="mb-8">
-          <h1 className="text-2xl font-semibold text-zinc-900 dark:text-zinc-100">
+          <h1 className="text-2xl font-semibold text-slate-900">
             RMH QA Suite Runner
           </h1>
-          <a href="/" className="mt-2 inline-block text-sm text-zinc-600 hover:underline dark:text-zinc-400">
+          <a href="/" className="mt-2 inline-block text-sm font-medium text-slate-600 hover:text-blue-600 hover:underline">
             ← Back to home
           </a>
         </header>
 
         {suite.testCases.length === 0 ? (
-          <p className="rounded-lg border border-zinc-200 bg-white p-6 text-zinc-600 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-400">
-            No test cases found. Ensure there are .md files in /testcases whose filename contains
-            &quot;{suite.suiteName}&quot; (case-sensitive) and that they use the exact marker
-            &quot;# Scenario:&quot;.
-          </p>
+          <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
+            <p className="text-slate-600">
+              No test cases found. Ensure there are .md files in /testcases whose filename contains
+              &quot;{suite.suiteName}&quot; (case-sensitive) and that they use the exact marker
+              &quot;# Scenario:&quot; or &quot;# Test Case:&quot;.
+            </p>
+          </div>
         ) : (
           <SuiteExecutionDashboard suite={suite} />
         )}

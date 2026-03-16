@@ -226,6 +226,33 @@ function sanitizeFilename(name: string): string {
   return name.replace(/[\\/:*?"<>|]/g, "-").trim() || "suite";
 }
 
+/** Sanitize a suite name for use as a filename prefix: strip illegal chars, replace spaces with underscores */
+function filenamePrefix(name: string | undefined): string {
+  if (!name || !name.trim()) return "suite";
+  return name.replace(/[\\/:*?"<>|]/g, "").replace(/\s+/g, "_").trim() || "suite";
+}
+
+/** Filesystem-safe timestamp: YYYY-MM-DD_HH-mm-ss */
+function getTimestamp(): string {
+  const d = new Date();
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}_${pad(d.getHours())}-${pad(d.getMinutes())}-${pad(d.getSeconds())}`;
+}
+
+/** Date folder name: YYYY-MM-DD */
+function getDateFolder(): string {
+  const d = new Date();
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+}
+
+/** Time-only stamp: HH-mm-ss */
+function getTimeStamp(): string {
+  const d = new Date();
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${pad(d.getHours())}-${pad(d.getMinutes())}-${pad(d.getSeconds())}`;
+}
+
 const PIE_SLICE_COLORS = ["#10b981", "#ef4444", "#f59e0b", "#94a3b8"] as const; // PASS, FAIL, BLOCKED, NOT RUN
 
 function buildPieChartSvg(
@@ -361,28 +388,7 @@ function getReportPageScript(): string {
     } catch (e) {}
   }
 
-  table && table.addEventListener("change", function(e) {
-    var sel = e.target && e.target.closest && e.target.closest(".report-edit-status");
-    if (sel) {
-      var tid = sel.getAttribute("data-test-id");
-      var tr = sel.closest("tr");
-      if (tid && payload) {
-        ensureEx(tid).status = sel.value;
-        if (tr) tr.setAttribute("data-status", sel.value);
-        persist();
-      }
-    }
-  });
-  table && table.addEventListener("input", function(e) {
-    var ta = e.target && e.target.closest && e.target.closest(".report-edit-comment");
-    if (ta) {
-      var tid = ta.getAttribute("data-test-id");
-      if (tid && payload) {
-        ensureEx(tid).comment = ta.value;
-        persist();
-      }
-    }
-  });
+
 
   function applyFilter(){
     for (var i = 0; i < rows.length; i++) {
@@ -473,7 +479,9 @@ function getReportPageScript(): string {
     }
     var a = document.createElement("a");
     a.href = URL.createObjectURL(blob);
-    a.download = "suite-progress-" + new Date().toISOString().replace(/[:.]/g, "-").slice(0, 19) + (asHtml ? ".html" : ".json");
+    var _d = new Date(); function _p(n){ return n < 10 ? "0" + n : "" + n; } var _ts = _d.getFullYear() + "-" + _p(_d.getMonth()+1) + "-" + _p(_d.getDate()) + "_" + _p(_d.getHours()) + "-" + _p(_d.getMinutes()) + "-" + _p(_d.getSeconds());
+    var _sn = (payload.suiteName || "").replace(/[\\\/:*?"<>|]/g, "").replace(/\\s+/g, "_").trim() || "suite";
+    a.download = _sn + "-progress-" + _ts + (asHtml ? ".html" : ".json");
     a.click();
     URL.revokeObjectURL(a.href);
   }
@@ -713,7 +721,9 @@ function getOfflineRunnerScript(): string {
     }
     var a = document.createElement("a");
     a.href = URL.createObjectURL(blob);
-    a.download = "suite-progress-" + new Date().toISOString().replace(/[:.]/g, "-").slice(0, 19) + (asHtml ? ".html" : ".json");
+    var _d = new Date(); function _p(n){ return n < 10 ? "0" + n : "" + n; } var _ts = _d.getFullYear() + "-" + _p(_d.getMonth()+1) + "-" + _p(_d.getDate()) + "_" + _p(_d.getHours()) + "-" + _p(_d.getMinutes()) + "-" + _p(_d.getSeconds());
+    var _sn = (payload.suiteName || "").replace(/[\\\/:*?"<>|]/g, "").replace(/\\s+/g, "_").trim() || "suite";
+    a.download = _sn + "-progress-" + _ts + (asHtml ? ".html" : ".json");
     a.click();
     URL.revokeObjectURL(a.href);
   }
@@ -777,25 +787,22 @@ function buildExportHtml(
     return `<span class="report-attachment-text">${escapeHtml(parsed.value)}</span>`;
   }
 
-  const statusOptions = ["PASS", "FAIL", "BLOCKED", "NOT RUN"] as const;
   const rows = suite.testCases
     .map((tc) => {
       const ex = getExecution(tc.id);
       const scenarioTitle =
         getCollapsedScenarioDisplay(tc.scenarioContent).title || tc.testCaseName;
       const sourceBasename = reportSourceFileBasename(tc.sourceFile);
-      const statusSelectOptions = statusOptions
-        .map(
-          (s) =>
-            `<option value="${escapeHtml(s)}"${ex.status === s ? " selected" : ""}>${escapeHtml(s)}</option>`
-        )
-        .join("");
+      const badgeClass = ex.status === "PASS" ? "report-status-badge-pass" : ex.status === "FAIL" ? "report-status-badge-fail" : ex.status === "BLOCKED" ? "report-status-badge-blocked" : "report-status-badge-not-run";
+      const commentHtml = ex.comment.trim()
+        ? `<span class="report-comment-text">${escapeHtml(ex.comment)}</span>`
+        : `<span class="report-comment-empty">-</span>`;
       return `<tr data-status="${escapeHtml(ex.status)}" data-test-id="${escapeHtml(tc.id)}">
         <td class="report-cell-id">${escapeHtml(tc.id)}</td>
         <td class="report-cell-name">${escapeHtml(scenarioTitle)}</td>
         <td class="report-cell-source">${escapeHtml(sourceBasename)}</td>
-        <td class="report-cell-status"><select class="report-edit-status" data-test-id="${escapeHtml(tc.id)}" aria-label="Status">${statusSelectOptions}</select></td>
-        <td class="report-cell-comment"><textarea class="report-edit-comment" data-test-id="${escapeHtml(tc.id)}" rows="2" aria-label="Comment">${escapeHtml(ex.comment)}</textarea></td>
+        <td class="report-cell-status"><span class="report-status-badge ${badgeClass}">${escapeHtml(ex.status)}</span></td>
+        <td class="report-cell-comment">${commentHtml}</td>
         <td class="report-cell-attachment">${attachmentCellHtml(ex.attachment)}</td>
       </tr>`;
     })
@@ -862,6 +869,13 @@ function buildExportHtml(
     .report-cell-id { font-family: ui-monospace, monospace; font-size: 0.8125rem; }
     .report-edit-status { width: 100%; min-width: 5.5rem; padding: 0.375rem 0.5rem; font-size: 0.8125rem; border: 1px solid #cbd5e1; border-radius: 0.375rem; background: #fff; color: #0f172a; }
     .report-edit-comment { width: 100%; min-height: 2.5rem; padding: 0.375rem 0.5rem; font-size: 0.8125rem; border: 1px solid #cbd5e1; border-radius: 0.375rem; background: #fff; color: #0f172a; resize: vertical; font-family: inherit; }
+    .report-status-badge { display: inline-block; padding: 0.25rem 0.625rem; border-radius: 9999px; font-size: 0.75rem; font-weight: 600; letter-spacing: 0.025em; white-space: nowrap; }
+    .report-status-badge-pass { background: #d1fae5; color: #065f46; }
+    .report-status-badge-fail { background: #fee2e2; color: #991b1b; }
+    .report-status-badge-blocked { background: #fef3c7; color: #92400e; }
+    .report-status-badge-not-run { background: #f1f5f9; color: #475569; }
+    .report-comment-text { font-size: 0.8125rem; color: #0f172a; white-space: pre-wrap; word-break: break-word; }
+    .report-comment-empty { font-size: 0.8125rem; color: #94a3b8; }
     .report-cell-attachment { max-width: 12rem; }
     .report-attachment-img { display: inline-flex; flex-direction: column; align-items: flex-start; gap: 0.25rem; padding: 0; border: none; background: none; cursor: pointer; text-align: left; }
     .report-attachment-img:hover .report-thumb { outline: 2px solid #3b82f6; outline-offset: 1px; }
@@ -952,7 +966,7 @@ ${rows}
 
     <div class="report-download-section">
       <h2>Download progress for import</h2>
-      <p>Edits above are saved in this page. Use one of these to bring your progress back into the main RMH QA Suite Runner.</p>
+      <p>Use one of these to download the execution state for import into the main RMH QA Suite Runner.</p>
       <button type="button" class="report-dl-btn report-dl-btn-primary" id="report-dl-json">Download as JSON</button>
       <button type="button" class="report-dl-btn" id="report-dl-html">Download as HTML</button>
     </div>
@@ -1375,52 +1389,117 @@ function parseScenarioBlocks(content: string): Block[] {
   return blocks;
 }
 
+/** Renders a single parsed block as a React element */
+function renderBlock(block: Block, key: number): React.ReactNode {
+  if (block.type === "scenarioTitle") {
+    return (
+      <h2 key={key} className="text-base font-semibold text-slate-900 border-b border-slate-200 pb-1 mb-2">
+        {renderInlineBold(block.text)}
+      </h2>
+    );
+  }
+  if (block.type === "section") {
+    return (
+      <div key={key} className="mt-4 mb-1 text-xs font-semibold uppercase tracking-wide text-slate-500">
+        {block.text}
+      </div>
+    );
+  }
+  if (block.type === "ul") {
+    return (
+      <ul key={key} className="list-disc pl-5 space-y-0.5 my-1">
+        {block.items.map((item, j) => (
+          <li key={j}>{renderInlineBold(item)}</li>
+        ))}
+      </ul>
+    );
+  }
+  if (block.type === "ol") {
+    return (
+      <ol key={key} className="list-decimal pl-5 space-y-0.5 my-1">
+        {block.items.map((item, j) => (
+          <li key={j}>{renderInlineBold(item)}</li>
+        ))}
+      </ol>
+    );
+  }
+  if (block.type === "hr") {
+    return <hr key={key} className="border-slate-200 my-2" />;
+  }
+  return (
+    <p key={key} className="leading-relaxed">
+      {renderInlineBold(block.text)}
+    </p>
+  );
+}
+
+/** Groups parsed blocks into sections: preamble (blocks before first section heading) and named sections */
+function groupBlocksIntoSections(blocks: Block[]): { preamble: Block[]; sections: { title: string; blocks: Block[] }[] } {
+  const preamble: Block[] = [];
+  const sections: { title: string; blocks: Block[] }[] = [];
+  let current: { title: string; blocks: Block[] } | null = null;
+
+  for (const block of blocks) {
+    if (block.type === "section") {
+      if (current) sections.push(current);
+      current = { title: block.text, blocks: [] };
+    } else if (current) {
+      current.blocks.push(block);
+    } else {
+      preamble.push(block);
+    }
+  }
+  if (current) sections.push(current);
+  return { preamble, sections };
+}
+
+function CollapsibleSection({ title, children, defaultExpanded }: { title: string; children: React.ReactNode; defaultExpanded: boolean }) {
+  const [expanded, setExpanded] = useState(defaultExpanded);
+  return (
+    <div className="border border-slate-200 rounded-lg overflow-hidden">
+      <button
+        type="button"
+        onClick={() => setExpanded((prev) => !prev)}
+        className="w-full flex items-center justify-between gap-2 px-3 py-2 bg-slate-100 hover:bg-slate-200 transition-colors text-left focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+      >
+        <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+          {title}
+        </span>
+        <span className="text-xs text-slate-400 select-none">{expanded ? "▲" : "▼"}</span>
+      </button>
+      {expanded && (
+        <div className="px-3 py-2 space-y-1">
+          {children}
+        </div>
+      )}
+    </div>
+  );
+}
+
 function ScenarioContentRenderer({ content }: { content: string }) {
   const blocks = parseScenarioBlocks(content);
+  const { preamble, sections } = groupBlocksIntoSections(blocks);
+
+  // No section headings detected — render flat as before
+  if (sections.length === 0) {
+    return (
+      <div className="space-y-1 text-sm text-slate-700">
+        {blocks.map((block, i) => renderBlock(block, i))}
+      </div>
+    );
+  }
+
+  let blockIndex = 0;
   return (
     <div className="space-y-1 text-sm text-slate-700">
-      {blocks.map((block, i) => {
-        if (block.type === "scenarioTitle") {
-          return (
-            <h2 key={i} className="text-base font-semibold text-slate-900 border-b border-slate-200 pb-1 mb-2">
-              {renderInlineBold(block.text)}
-            </h2>
-          );
-        }
-        if (block.type === "section") {
-          return (
-            <div key={i} className="mt-4 mb-1 text-xs font-semibold uppercase tracking-wide text-slate-500">
-              {block.text}
-            </div>
-          );
-        }
-        if (block.type === "ul") {
-          return (
-            <ul key={i} className="list-disc pl-5 space-y-0.5 my-1">
-              {block.items.map((item, j) => (
-                <li key={j}>{renderInlineBold(item)}</li>
-              ))}
-            </ul>
-          );
-        }
-        if (block.type === "ol") {
-          return (
-            <ol key={i} className="list-decimal pl-5 space-y-0.5 my-1">
-              {block.items.map((item, j) => (
-                <li key={j}>{renderInlineBold(item)}</li>
-              ))}
-            </ol>
-          );
-        }
-        if (block.type === "hr") {
-          return <hr key={i} className="border-slate-200 my-2" />;
-        }
-        return (
-          <p key={i} className="leading-relaxed">
-            {renderInlineBold(block.text)}
-          </p>
-        );
-      })}
+      {preamble.length > 0 && preamble.map((block) => renderBlock(block, blockIndex++))}
+      <div className="space-y-2 mt-2">
+        {sections.map((section, si) => (
+          <CollapsibleSection key={si} title={section.title} defaultExpanded={true}>
+            {section.blocks.map((block) => renderBlock(block, blockIndex++))}
+          </CollapsibleSection>
+        ))}
+      </div>
     </div>
   );
 }
@@ -1602,17 +1681,12 @@ function TestCaseCard({
           <ScenarioContentRenderer content={tc.scenarioContent} />
         ) : (
           (() => {
-            const { title, preview } = getCollapsedScenarioDisplay(tc.scenarioContent);
+            const { title } = getCollapsedScenarioDisplay(tc.scenarioContent);
             return (
               <>
                 {title ? (
                   <p className="text-sm font-semibold text-slate-900">
                     {title}
-                  </p>
-                ) : null}
-                {preview ? (
-                  <p className={title ? "mt-1 text-sm text-slate-500" : "text-sm text-slate-500"}>
-                    {preview}
                   </p>
                 ) : null}
                 <button
@@ -1800,14 +1874,12 @@ export default function SuiteExecutionDashboard({ suite }: { suite: GeneratedSui
       executionState: executionByTestId,
       sourceFiles: suite.sourceFiles,
     };
-    const timestamp = new Date().toISOString().replace(/[:.]/g, "-").slice(0, 19);
-    downloadJson(payload, `suite-progress-${timestamp}.json`);
+    downloadJson(payload, `${filenamePrefix(displayTitle)}-progress-${getTimestamp()}.json`);
   }, [displayTitle, suite.sourceFiles, executionByTestId]);
 
   const exportHtml = useCallback(() => {
     const html = buildOfflineRunnerHtml(suite, executionByTestId, displayTitle);
-    const timestamp = new Date().toISOString().replace(/[:.]/g, "-").slice(0, 19);
-    downloadReport(html, `suite-progress-${timestamp}.html`);
+    downloadReport(html, `${filenamePrefix(displayTitle)}-progress-${getTimestamp()}.html`);
   }, [suite, executionByTestId, displayTitle]);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -1965,10 +2037,23 @@ export default function SuiteExecutionDashboard({ suite }: { suite: GeneratedSui
         <div className="mt-4 flex flex-wrap gap-2">
           <button
             type="button"
-            onClick={() => {
+            onClick={async () => {
               const html = buildExportHtml(suite, executionByTestId, getExecution, displayTitle);
-              const filename = `${sanitizeFilename(displayTitle)}-execution-report.html`;
-              downloadReport(html, filename);
+              const dateFolder = getDateFolder();
+              const filename = `${filenamePrefix(displayTitle)}-results-${getTimeStamp()}.html`;
+              try {
+                const res = await fetch("/api/export-results", {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({ dateFolder, filename, html }),
+                });
+                if (!res.ok) {
+                  const data = await res.json().catch(() => ({}));
+                  window.alert(`Export failed: ${(data as { error?: string }).error || res.statusText}`);
+                }
+              } catch {
+                window.alert("Export failed: could not reach the server.");
+              }
             }}
             className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
           >

@@ -13,15 +13,6 @@ Priority: Unknown
 
 # Scenario: Order Settings Synchronization to Active Stores
 
-## Business Entity
-Order Settings
-
-## Business Purpose
-Ensure that Order Settings configured in Central Manager synchronize correctly to all active stores so that purchasing behavior, order processing rules, and inventory replenishment logic remain consistent across the organization.
-
-## Trigger
-A user creates or updates Order Settings in Central Manager.
-
 ## Preconditions
 - Central and Store synchronization services are active.
 - Active stores exist in the **Store** table.
@@ -48,17 +39,3 @@ Central Manager → Setup → Inventory/Purchasing → Order Settings
 - Order Settings appear in store configuration.
 - Configuration values match Central Manager settings.
 - Settings are applied during purchase order or replenishment workflows.
-
-## Pass Criteria
-- Order Settings appear in all active stores with correct values.
-
-## Fail Criteria
-- Settings missing from one or more stores.
-- Configuration mismatch between Central and Store.
-
-## Risks / Assumptions
-- Synchronization applies only to stores marked as active in the **Store** table.
-- Some order settings may depend on supplier or purchasing configuration.
-
-## Known Issues / Notes
-- Actual Result observed: Pass insert/update

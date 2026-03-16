@@ -13,15 +13,6 @@ Priority: Unknown
 
 # Scenario: Items - Kit Item Synchronization to Selected Stores
 
-## Business Entity
-Kit Item
-
-## Business Purpose
-Ensure that Kit Items created or updated in Central Manager are synchronized correctly to the selected Store Groups so that bundled products composed of multiple components remain consistent across stores.
-
-## Trigger
-A user creates or updates a Kit Item in Central Manager and assigns it to one or more Store Groups.
-
 ## Preconditions
 - Central and Store synchronization services are active.
 - At least one Store Group exists.
@@ -63,20 +54,3 @@ Central Manager → Merchandising → Items
 - Component items within the kit match Central configuration.
 - Pricing and cost values match Central.
 - Store Group assignment correctly determines which stores receive the item.
-
-## Pass Criteria
-- Kit item is successfully inserted or updated in the selected store(s).
-- Kit structure and item data match between Central and Store.
-
-## Fail Criteria
-- Kit item does not appear in the store.
-- Kit components are missing or incorrect.
-- Item data differs between Central and Store.
-- Synchronization produces duplicate or incomplete records.
-
-## Risks / Assumptions
-- Component items must already exist and be synchronized before creating the kit.
-- Synchronization timing may depend on system configuration.
-
-## Known Issues / Notes
-- Actual Result observed: Pass insert/update

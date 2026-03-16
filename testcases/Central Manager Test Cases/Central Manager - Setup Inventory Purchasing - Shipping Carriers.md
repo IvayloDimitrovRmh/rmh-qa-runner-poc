@@ -13,15 +13,6 @@ Priority: Unknown
 
 # Scenario: Shipping Carriers Synchronization to Selected Stores
 
-## Business Entity
-Shipping Carriers
-
-## Business Purpose
-Ensure that Shipping Carriers configured in Central Manager synchronize correctly to selected Store Groups so that purchasing, receiving, and transfer logistics use consistent carrier information across all stores.
-
-## Trigger
-A user creates or updates a Shipping Carrier in Central Manager.
-
 ## Preconditions
 - Central and Store synchronization services are active.
 - At least one Store Group exists.
@@ -53,18 +44,3 @@ Central Manager → Setup → Inventory/Purchasing → Shipping Carriers
 - Shipping Carrier exists in store configuration.
 - Carrier name and code match Central.
 - Carrier is available for purchasing, receiving, and transfer workflows.
-
-## Pass Criteria
-- Shipping Carrier appears in store configuration with correct data.
-
-## Fail Criteria
-- Shipping Carrier missing from store configuration.
-- Data mismatch between Central and Store.
-- Carrier unavailable in purchasing or transfer workflows.
-
-## Risks / Assumptions
-- Synchronization timing may depend on configured sync intervals.
-- Shipping carriers may depend on shipping method configuration.
-
-## Known Issues / Notes
-- Actual Result observed: Pass insert/update

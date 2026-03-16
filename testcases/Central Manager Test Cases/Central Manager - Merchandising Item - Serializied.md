@@ -13,15 +13,6 @@ Priority: Unknown
 
 # Scenario: Items - Serialized Item Synchronization to Selected Stores
 
-## Business Entity
-Serialized Item
-
-## Business Purpose
-Ensure that Serialized Items created or updated in Central Manager are synchronized correctly to the selected Store Groups so that serialized inventory tracking and product catalog data remain consistent across all participating stores.
-
-## Trigger
-A user creates or updates a Serialized Item in Central Manager and assigns it to one or more Store Groups.
-
 ## Preconditions
 - Central and Store synchronization services are active.
 - At least one Store Group exists.
@@ -63,20 +54,3 @@ Central Manager → Merchandising → Items
 - Serialized item configuration is preserved.
 - Pricing and cost values match Central.
 - Store Group assignment correctly determines which stores receive the item.
-
-## Pass Criteria
-- Serialized item is successfully inserted or updated in the selected store(s).
-- Item configuration and data match between Central and Store.
-
-## Fail Criteria
-- Item does not appear in the store.
-- Serialized configuration is not preserved.
-- Item data differs between Central and Store.
-- Synchronization creates duplicate records.
-
-## Risks / Assumptions
-- Synchronization timing may depend on sync interval configuration.
-- Store must belong to the assigned Store Group to receive the item.
-
-## Known Issues / Notes
-- Actual Result observed: Pass insert/update

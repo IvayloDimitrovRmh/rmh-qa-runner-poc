@@ -13,15 +13,6 @@ Priority: Unknown
 
 # Scenario: Items - Voucher Item Synchronization to Selected Stores
 
-## Business Entity
-Voucher Item
-
-## Business Purpose
-Ensure that Voucher Items created or updated in Central Manager synchronize correctly to the selected Store Groups so that voucher-based products or gift certificates are available and consistent across all participating stores.
-
-## Trigger
-A user creates or updates a Voucher Item in Central Manager and assigns it to one or more Store Groups.
-
 ## Preconditions
 - Central and Store synchronization services are active.
 - At least one Store Group exists.
@@ -59,20 +50,3 @@ Central Manager → Merchandising → Items
 - Lookup Code and Description match Central.
 - Voucher configuration and value match Central.
 - Store Group assignment correctly determines which stores receive the item.
-
-## Pass Criteria
-- Voucher item is successfully inserted or updated in the selected store(s).
-- Item configuration and data match between Central and Store.
-
-## Fail Criteria
-- Item does not appear in the store.
-- Voucher configuration is not preserved.
-- Item data differs between Central and Store.
-- Synchronization creates duplicate or inconsistent records.
-
-## Risks / Assumptions
-- Synchronization timing may depend on configured sync intervals.
-- Store must belong to the assigned Store Group to receive the item.
-
-## Known Issues / Notes
-- Actual Result observed: Pass insert/update

@@ -13,15 +13,6 @@ Priority: Unknown
 
 # Scenario: Items - Weighed Item Synchronization to Selected Stores
 
-## Business Entity
-Weighed Item
-
-## Business Purpose
-Ensure that Weighed Items configured in Central Manager synchronize correctly to selected Store Groups so that items sold by weight (e.g., produce, deli items) maintain consistent configuration across all stores.
-
-## Trigger
-A user creates or updates a Weighed Item in Central Manager and assigns it to one or more Store Groups.
-
 ## Preconditions
 - Central and Store synchronization services are active.
 - At least one Store Group exists.
@@ -61,20 +52,3 @@ Central Manager → Merchandising → Items
 - Weight-based pricing configuration is preserved.
 - Pricing and cost values match Central.
 - Store Group assignment correctly determines which stores receive the item.
-
-## Pass Criteria
-- Weighed item is successfully inserted or updated in the selected store(s).
-- Item configuration and data match between Central and Store.
-
-## Fail Criteria
-- Item does not appear in the store.
-- Weight-based configuration is not preserved.
-- Item data differs between Central and Store.
-- Synchronization creates duplicate or inconsistent records.
-
-## Risks / Assumptions
-- Synchronization timing may depend on configured sync intervals.
-- Store must belong to the assigned Store Group to receive the item.
-
-## Known Issues / Notes
-- Actual Result observed: Pass insert/update

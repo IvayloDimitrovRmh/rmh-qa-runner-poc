@@ -13,15 +13,6 @@ Priority: Unknown
 
 # Scenario: Charges Synchronization to Selected Stores
 
-## Business Entity
-Charges
-
-## Business Purpose
-Ensure that purchasing Charges configured in Central Manager synchronize correctly to selected Store Groups so that additional costs (such as shipping, handling, or service charges) can be applied consistently during purchasing and inventory transactions across stores.
-
-## Trigger
-A user creates or updates a Charge configuration in Central Manager.
-
 ## Preconditions
 - Central and Store synchronization services are active.
 - At least one Store Group exists.
@@ -54,18 +45,3 @@ Central Manager → Setup → Inventory/Purchasing → Charges
 - Charge exists in store configuration.
 - Charge name and settings match Central.
 - Charge is available when creating purchasing documents or transactions.
-
-## Pass Criteria
-- Charge appears in store configuration with correct data.
-
-## Fail Criteria
-- Charge missing from store configuration.
-- Data mismatch between Central and Store.
-- Charge unavailable during purchasing workflows.
-
-## Risks / Assumptions
-- Synchronization timing may depend on configured sync intervals.
-- Charges may depend on purchasing or supplier configuration.
-
-## Known Issues / Notes
-- Actual Result observed: Pass insert/update

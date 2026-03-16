@@ -13,15 +13,6 @@ Priority: Unknown
 
 # Scenario: Finance Charges Synchronization to Stores
 
-## Business Entity
-Finance Charges
-
-## Business Purpose
-Ensure that Finance Charge configurations defined in Central Manager synchronize to all active stores so overdue account balances and interest calculations are applied consistently across all store locations.
-
-## Trigger
-A user creates or updates Finance Charge configuration in Central Manager.
-
 ## Preconditions
 - Central and Store synchronization services are operational.
 - Active stores exist in the `Store` table.
@@ -50,33 +41,9 @@ Central Manager → Setup → Customer → Accounts Receivable → Finance Charg
 - Values match those configured in Central.
 - No duplicate configuration records are created.
 
-## Pass Criteria
-- Finance Charge configuration successfully appears in all active store(s).
-
-## Fail Criteria
-- Configuration does not appear in store(s).
-- Data mismatch between Central and Store.
-- Synchronization fails.
-
-## Risks / Assumptions
-- Synchronization relies on Central-to-Store synchronization services.
-- Active stores are determined from the `Store` table.
-
-## Known Issues / Notes
-None documented.
-
 ---
 
 # Scenario: Payment Terms Synchronization to Stores
-
-## Business Entity
-Payment Terms
-
-## Business Purpose
-Ensure that Payment Term configurations created or modified in Central Manager synchronize to all active stores so payment schedules and credit conditions remain consistent across store locations.
-
-## Trigger
-A user creates or updates Payment Term configuration in Central Manager.
 
 ## Preconditions
 - Central and Store synchronization services are operational.
@@ -105,18 +72,3 @@ Central Manager → Setup → Customer → Accounts Receivable → Payment Terms
 - Payment Terms records exist in store configuration.
 - Data matches Central configuration.
 - No duplicate configuration records are created.
-
-## Pass Criteria
-- Payment Terms configuration successfully appears in all active store(s).
-
-## Fail Criteria
-- Configuration does not appear in store(s).
-- Data mismatch between Central and Store.
-- Synchronization fails.
-
-## Risks / Assumptions
-- Synchronization depends on Central-to-Store synchronization services.
-- Active stores are determined from the `Store` table.
-
-## Known Issues / Notes
-None documented.

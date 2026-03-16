@@ -29,7 +29,7 @@ Automation Candidate: Yes
 4. Save the user.
 5. Open **POS** and log in using the newly created user credentials.
 
-## Validation Points
+## Validation Checks
 - Login ID and User Name are consistent across systems.
 - POS login authentication succeeds.
 - Assigned POS roles allow access.
@@ -54,7 +54,7 @@ Automation Candidate: Yes
 3. Save the user.
 4. Open **POS** and log in using the newly created user credentials.
 
-## Validation Points
+## Validation Checks
 - Login ID and User Name are correctly saved.
 - POS login authentication succeeds.
 - POS roles grant appropriate permissions.

@@ -6,7 +6,7 @@ Business Area: Worksheets > Worksheets
 Source System: Central  
 Target System: Store(s)  
 Sync Direction: Central -> Store  
-Release: Unknown  
+Release: MVP 1.1   
 Priority: Unknown  
 
 ---

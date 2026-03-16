@@ -13,15 +13,6 @@ Priority: Unknown
 
 # Scenario: AR Reason Codes Synchronization to Stores
 
-## Business Entity
-AR Reason Codes
-
-## Business Purpose
-Ensure that Accounts Receivable Reason Codes configured in Central Manager synchronize to all active stores so that financial adjustments, write-offs, and account transaction reasons remain consistent across all store locations.
-
-## Trigger
-A user creates or updates an AR Reason Code in Central Manager.
-
 ## Preconditions
 - Central and Store synchronization services are active.
 - Active stores exist in the `Store` table.
@@ -49,18 +40,3 @@ Central Manager → Setup → Customer → Accounts Receivable → AR Reason Cod
 - AR Reason Code records exist in store configuration.
 - Data values match those defined in Central.
 - No duplicate configuration records are created.
-
-## Pass Criteria
-- AR Reason Code configuration successfully appears in all active store(s).
-
-## Fail Criteria
-- Configuration does not appear in store(s).
-- Data mismatch between Central and Store.
-- Synchronization fails or does not execute.
-
-## Risks / Assumptions
-- Synchronization relies on active Central-to-Store synchronization services.
-- Active stores are determined from the `Store` table.
-
-## Known Issues / Notes
-None documented.

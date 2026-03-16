@@ -13,15 +13,6 @@ Priority: Unknown
 
 # Scenario: Items - Matrix Item Synchronization to Selected Stores
 
-## Business Entity
-Matrix Item
-
-## Business Purpose
-Ensure that Matrix Items created or updated in Central Manager synchronize correctly to selected Store Groups so that product variants (such as size, color, or style combinations) remain consistent across all stores.
-
-## Trigger
-A user creates or updates a Matrix Item in Central Manager and assigns it to one or more Store Groups.
-
 ## Preconditions
 - Central and Store synchronization services are active.
 - At least one Store Group exists.
@@ -64,21 +55,3 @@ Central Manager → Merchandising → Items
 - Lookup codes and descriptions match Central.
 - Variant attributes (size, color, etc.) are preserved.
 - Pricing and cost values match Central.
-
-## Pass Criteria
-- Matrix item and all variants are successfully inserted or updated in the selected store(s).
-- Variant structure and item data match between Central and Store.
-
-## Fail Criteria
-- Matrix item does not appear in the store.
-- Variant combinations are missing or incorrect.
-- Item data differs between Central and Store.
-- Synchronization produces duplicate or incomplete variant records.
-
-## Risks / Assumptions
-- Matrix attributes must be configured correctly before item creation.
-- Synchronization timing may depend on system configuration.
-- Store must belong to the assigned Store Group to receive the item.
-
-## Known Issues / Notes
-- Actual Result observed: Pass insert/update

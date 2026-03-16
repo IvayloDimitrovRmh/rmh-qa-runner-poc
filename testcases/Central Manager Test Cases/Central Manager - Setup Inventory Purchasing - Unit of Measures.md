@@ -13,15 +13,6 @@ Priority: Unknown
 
 # Scenario: Unit of Measures Synchronization to Active Stores
 
-## Business Entity
-Unit of Measures
-
-## Business Purpose
-Ensure that Units of Measure configured in Central Manager synchronize correctly to all active stores so that inventory quantities, purchasing units, and sales units remain consistent across systems.
-
-## Trigger
-A user creates or updates a Unit of Measure in Central Manager.
-
 ## Preconditions
 - Central and Store synchronization services are active.
 - Active stores exist in the **Store** table.
@@ -50,17 +41,3 @@ Central Manager → Setup → Inventory/Purchasing → Unit of Measures
 - Unit exists in store configuration.
 - Unit name and code match Central Manager.
 - Unit is available for item configuration and purchasing transactions.
-
-## Pass Criteria
-- Unit of Measure appears in store configuration with correct data.
-
-## Fail Criteria
-- Unit missing from store configuration.
-- Data mismatch between Central and Store.
-
-## Risks / Assumptions
-- Synchronization applies only to stores marked as active in the **Store** table.
-- Units of Measure may affect inventory calculations and purchasing conversions.
-
-## Known Issues / Notes
-- Actual Result observed: Pass insert/update

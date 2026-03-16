@@ -30,7 +30,7 @@ Automation Candidate: Yes
 6. Open **Actions (F6) > Sales Rep**.
 7. Search for the created **Sales Representative ID** and select it.
 
-## Validation Points
+## Validation Checks
 - Sales Representative ID matches between Central and POS.
 - Sales Representative Name matches the created record.
 - Sales Representative can be selected and attached to the item transaction.
@@ -56,7 +56,7 @@ Automation Candidate: Yes
 5. Open **Actions (F6) > Sales Rep**.
 6. Search for the created **Sales Representative ID** and select it.
 
-## Validation Points
+## Validation Checks
 - Sales Representative ID matches the created record.
 - Sales Representative Name matches the created record.
 - Sales Representative can be selected in POS.

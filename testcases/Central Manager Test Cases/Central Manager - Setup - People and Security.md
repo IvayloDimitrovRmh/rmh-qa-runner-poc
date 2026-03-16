@@ -13,15 +13,6 @@ Priority: Unknown
 
 # Scenario: Store Users Synchronization to Selected Stores
 
-## Business Entity
-Store User
-
-## Business Purpose
-Ensure that Store Users created or updated in Central Manager synchronize correctly to the selected Store Groups so that authorized personnel can access POS and store systems with consistent permissions.
-
-## Trigger
-A user creates or updates a Store User in Central Manager.
-
 ## Preconditions
 - Central and Store synchronization services are active.
 - At least one Store Group exists.
@@ -53,19 +44,6 @@ Central Manager → Setup → People and Security → Store Users
 - User exists in store configuration.
 - Login ID and username match Central.
 - Assigned roles are applied correctly.
-
-## Pass Criteria
-- Store User appears in the store and can authenticate successfully.
-
-## Fail Criteria
-- User missing in store configuration.
-- Authentication fails or permissions mismatch.
-
-## Risks / Assumptions
-- User authentication systems must be synchronized with POS configuration.
-
-## Known Issues / Notes
-- Actual Result observed: Pass insert/update
 
 # Setup / People and Security
 
@@ -82,15 +60,6 @@ Priority: Unknown
 
 # Scenario: Store Users Synchronization to Selected Stores
 
-## Business Entity
-Store User
-
-## Business Purpose
-Ensure that Store Users created or updated in Central Manager synchronize correctly to the selected Store Groups so that authorized personnel can access POS and store systems with consistent permissions.
-
-## Trigger
-A user creates or updates a Store User in Central Manager.
-
 ## Preconditions
 - Central and Store synchronization services are active.
 - At least one Store Group exists.
@@ -123,31 +92,9 @@ Central Manager → Setup → People and Security → Store Users
 - Login ID and username match Central.
 - Assigned roles are applied correctly.
 
-## Pass Criteria
-- Store User appears in the store and can authenticate successfully.
-
-## Fail Criteria
-- User missing in store configuration.
-- Authentication fails or permissions mismatch.
-
-## Risks / Assumptions
-- User authentication systems must be synchronized with POS configuration.
-
-## Known Issues / Notes
-- Actual Result observed: Pass insert/update
-
 ---
 
 # Scenario: Sales Representative Synchronization to Selected Stores
-
-## Business Entity
-Sales Representative
-
-## Business Purpose
-Ensure that Sales Representatives configured in Central Manager synchronize correctly to the selected Store Groups so that sales attribution and commission calculations function consistently across stores.
-
-## Trigger
-A user creates or updates a Sales Representative in Central Manager.
 
 ## Preconditions
 - Central and Store synchronization services are active.
@@ -177,30 +124,9 @@ Central Manager → Setup → People and Security → Sales Representatives
 - Sales Representative exists in store configuration.
 - Name and ID match Central configuration.
 
-## Pass Criteria
-- Sales Representative appears and can be used in POS transactions.
-
-## Fail Criteria
-- Representative missing or data mismatch.
-
-## Risks / Assumptions
-- Sales representatives may depend on user configuration.
-
-## Known Issues / Notes
-- Actual Result observed: Pass insert/update
-
 ---
 
 # Scenario: POS User Roles Synchronization to Stores
-
-## Business Entity
-POS User Roles
-
-## Business Purpose
-Ensure that POS User Roles synchronize correctly to stores so that user permission structures remain consistent across systems.
-
-## Trigger
-POS roles are configured or updated in Central Manager.
 
 ## Preconditions
 - Central and Store synchronization services are active.
@@ -226,30 +152,9 @@ Central Manager → Setup → People and Security → POS User Roles
 ## Validation Checks
 - Role names and permissions match Central configuration.
 
-## Pass Criteria
-- Roles appear correctly in store configuration.
-
-## Fail Criteria
-- Roles missing or permissions incorrect.
-
-## Risks / Assumptions
-- Roles synchronize as dependencies of Store Users.
-
-## Known Issues / Notes
-- Actual Result observed: Pass insert/update
-
 ---
 
 # Scenario: Manager User Roles Synchronization to Stores
-
-## Business Entity
-Manager User Roles
-
-## Business Purpose
-Ensure that Manager User Roles synchronize correctly so that managerial permissions and access controls remain consistent across the organization.
-
-## Trigger
-Manager roles are configured or updated in Central Manager.
 
 ## Preconditions
 - Central and Store synchronization services are active.
@@ -274,15 +179,3 @@ Central Manager → Setup → People and Security → Manager User Roles
 
 ## Validation Checks
 - Role names and permissions match Central.
-
-## Pass Criteria
-- Manager roles appear correctly in stores.
-
-## Fail Criteria
-- Roles missing or incorrect permissions.
-
-## Risks / Assumptions
-- Roles synchronize as dependencies of Store Users.
-
-## Known Issues / Notes
-- Actual Result observed: Pass insert/update

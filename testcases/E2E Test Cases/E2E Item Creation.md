@@ -30,7 +30,7 @@ Automation Candidate: Yes
 4. Save the item.
 5. In **POS**, search the item using the **Lookup Code**.
 
-## Validation Points
+## Validation Checks
 - Lookup Code matches between Central and POS.
 - Department and Category are correct.
 - Price and Cost values are correct.
@@ -56,10 +56,6 @@ Automation Candidate: Yes
 3. Save the item.
 4. In **POS**, search using the **updated Lookup Code**.
 
-## Validation Points
+## Validation Checks
 - Updated Lookup Code is searchable in POS.
 - Updated description, department, category, price and cost are correct.
-
-## Negative / Edge Case Coverage
-- Invalid data should prevent saving changes.
-- Update should not create duplicate items.

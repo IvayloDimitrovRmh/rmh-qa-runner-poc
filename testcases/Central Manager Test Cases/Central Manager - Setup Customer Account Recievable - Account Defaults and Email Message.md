@@ -13,15 +13,6 @@ Priority: Unknown
 
 # Scenario: Accounting Defaults Synchronization to Stores
 
-## Business Entity
-Accounting Defaults
-
-## Business Purpose
-Ensure that Accounting Default configurations defined in Central Manager synchronize to all active stores so that accounts receivable transactions use consistent accounting mappings and financial settings across all store locations.
-
-## Trigger
-A user creates or updates Accounting Default configuration in Central Manager.
-
 ## Preconditions
 - Central and Store synchronization services are operational.
 - Active stores exist in the `Store` table.
@@ -50,33 +41,9 @@ Central Manager → Setup → Customer → Accounts Receivable → Accounting De
 - Data values match those defined in Central.
 - No duplicate configuration records are created.
 
-## Pass Criteria
-- Accounting Default configuration successfully appears in all active store(s).
-
-## Fail Criteria
-- Configuration does not appear in store(s).
-- Data mismatch between Central and Store.
-- Synchronization fails.
-
-## Risks / Assumptions
-- Synchronization relies on Central-to-Store synchronization services.
-- Active stores are determined from the `Store` table.
-
-## Known Issues / Notes
-None documented.
-
 ---
 
 # Scenario: Email Message Synchronization to Stores
-
-## Business Entity
-Email Message
-
-## Business Purpose
-Ensure that Email Message templates configured in Central Manager synchronize to all active stores so automated communication with customers (such as statements, invoices, or account notifications) uses consistent templates across all store locations.
-
-## Trigger
-A user creates or updates an Email Message template in Central Manager.
 
 ## Preconditions
 - Central and Store synchronization services are operational.
@@ -105,18 +72,3 @@ Central Manager → Setup → Customer → Accounts Receivable → Email Message
 - Email Message records exist in store configuration.
 - Data values match those defined in Central.
 - No duplicate configuration records are created.
-
-## Pass Criteria
-- Email Message configuration successfully appears in all active store(s).
-
-## Fail Criteria
-- Configuration does not appear in store(s).
-- Data mismatch between Central and Store.
-- Synchronization fails.
-
-## Risks / Assumptions
-- Synchronization depends on Central-to-Store synchronization services.
-- Active stores are determined from the `Store` table.
-
-## Known Issues / Notes
-None documented.

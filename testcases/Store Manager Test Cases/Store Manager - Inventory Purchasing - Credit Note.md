@@ -13,15 +13,6 @@ Priority: 13
 
 # Scenario: Credit Note Synchronization
 
-## Business Entity
-Credit Note
-
-## Business Purpose
-Ensure that Credit Notes created, updated, or deleted in Store are synchronized correctly to Central so that inventory adjustments, supplier balances, and financial records remain consistent across systems.
-
-## Trigger
-A user creates, updates, or deletes a Credit Note in Store Manager.
-
 ## Preconditions
 - Store and Central synchronization services are active.
 - Supplier records exist.
@@ -63,22 +54,3 @@ Store Manager → Inventory/Purchasing → Credit Notes
 - Item lines and quantities match between systems.
 - Updates are reflected accurately after synchronization.
 - No duplicate Credit Note records are created.
-
-## Pass Criteria
-- Credit Note appears in Central with correct header and item-level data.
-- Updates and deletions are synchronized correctly.
-- Item quantities and credit values match between Store and Central.
-
-## Fail Criteria
-- Credit Note does not appear in Central.
-- Item quantities from the Items tab do not synchronize.
-- Header or item-level data differs between Store and Central.
-- Duplicate records appear.
-
-## Risks / Assumptions
-- Synchronization timing may vary depending on system configuration.
-- Credit Note workflows may depend on supplier and purchasing configuration.
-- Field-level behavior should be validated against RMH documentation during execution.
-
-## Known Issues / Notes
-- Bug 204263: Store > Invoice: The qty from Items tab not sync to Central

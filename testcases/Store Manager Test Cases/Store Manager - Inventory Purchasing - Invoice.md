@@ -13,15 +13,6 @@ Priority: 12
 
 # Scenario: Invoice Synchronization
 
-## Business Entity
-Invoice
-
-## Business Purpose
-Ensure that invoices created, updated, or deleted in Store are synchronized to Central so that purchasing, receiving, and financial inventory records remain consistent across locations. RMH Support exposes Store Manager documentation and broader RMH product documentation areas that can be used later to validate execution paths and terminology during test execution. :contentReference[oaicite:0]{index=0}
-
-## Trigger
-A user creates, updates, or deletes an invoice in the Store system.
-
 ## Preconditions
 - Store and Central are connected and synchronization services are active.
 - A valid supplier exists.
@@ -62,22 +53,3 @@ Store Manager → Inventory/Purchasing → Invoice
 - Item lines and quantities match between Store and Central.
 - Updates made in Store are reflected in Central.
 - No duplicate invoice records are created.
-
-## Pass Criteria
-- Central contains the corresponding invoice created in Store.
-- Header and item-level data match between Store and Central.
-- Updates and deletions are reflected correctly in Central.
-
-## Fail Criteria
-- Invoice does not appear in Central.
-- Header or item-level data does not match.
-- Quantity from the Items tab is not synchronized.
-- Duplicate or corrupted invoice records appear.
-
-## Risks / Assumptions
-- Synchronization timing may vary based on environment and services.
-- Some invoice workflows may depend on related purchasing setup in the tenant.
-- Exact field behavior should be confirmed during execution against the available RMH documentation set. :contentReference[oaicite:1]{index=1}
-
-## Known Issues / Notes
-- Bug 204263: Store > Invoice: The qty from Items tab not sync to Central

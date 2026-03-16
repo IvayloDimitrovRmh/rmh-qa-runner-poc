@@ -13,15 +13,6 @@ Priority: 1
 
 # Scenario: Transfer IN - Standard
 
-## Business Entity
-Transfer In
-
-## Business Purpose
-Ensure that standard Transfer IN transactions created or modified in Store Manager synchronize correctly to Central so that inventory adjustments remain consistent across locations.
-
-## Trigger
-User creates, updates, or deletes a standard Transfer IN transaction in Store Manager.
-
 ## Preconditions
 - Store Manager is connected to Central.
 - Synchronization service is active.
@@ -53,30 +44,9 @@ Store Manager → Inventory/Purchasing → Transfers → Transfer IN
 - Item quantities match between Store and Central.
 - No duplicate records are created.
 
-## Pass Criteria
-Transfer IN records created, updated, or deleted in Store are correctly synchronized to Central.
-
-## Fail Criteria
-Transfer records do not appear or contain mismatched data in Central.
-
-## Risks / Assumptions
-Synchronization services must be operational.
-
-## Known Issues / Notes
-Actual Result: Insert/Delete/update into Central.
-
 ---
 
 # Scenario: Transfer IN - Inter Store
-
-## Business Entity
-Transfer In
-
-## Business Purpose
-Validate that inter-store Transfer IN transactions synchronize correctly to Central.
-
-## Trigger
-User creates, updates, or deletes an inter-store Transfer IN transaction.
 
 ## Preconditions
 - Two stores configured in the system.
@@ -106,30 +76,9 @@ Store Manager → Inventory/Purchasing → Transfers → Transfer IN
 - Transfer IN record exists in Central.
 - Item data matches between Store and Central.
 
-## Pass Criteria
-Inter-store Transfer IN records synchronize correctly.
-
-## Fail Criteria
-Transfer IN records do not appear or contain incorrect data.
-
-## Risks / Assumptions
-Inter-store synchronization must be enabled.
-
-## Known Issues / Notes
-Actual Result: Insert/Delete/update into Central.
-
 ---
 
 # Scenario: Transfer IN - Inter Store End-to-End Flow (Fully Shipped)
-
-## Business Entity
-Transfer In / Transfer Out
-
-## Business Purpose
-Validate the complete inter-store transfer process where goods are fully shipped from one store and received by another.
-
-## Trigger
-An inter-store transfer is created and fully shipped between two stores.
 
 ## Preconditions
 - Two stores configured for inter-store transfers.
@@ -159,31 +108,9 @@ Store Manager → Inventory/Purchasing → Transfers
 - Cost values are consistent.
 - Central contains both transaction records.
 
-## Pass Criteria
-Both Transfer OUT and Transfer IN transactions are synchronized correctly and cost data flows correctly.
-
-## Fail Criteria
-Missing transfer records or incorrect cost propagation.
-
-## Risks / Assumptions
-Cost calculation settings must be consistent across stores.
-
-## Known Issues / Notes
-Expected behavior from screenshot:  
-Transfer IN inserted into Central and matching Transfer OUT created at the other store.
-
 ---
 
 # Scenario: Transfer IN - Inter Store End-to-End Flow (Partially Shipped)
-
-## Business Entity
-Transfer In / Transfer Out
-
-## Business Purpose
-Ensure partial shipment inter-store transfers synchronize correctly.
-
-## Trigger
-A Transfer OUT is partially shipped and received by another store.
 
 ## Preconditions
 - Source store has sufficient inventory.
@@ -212,31 +139,9 @@ Store Manager → Inventory/Purchasing → Transfers
 - Transfer records exist in Central.
 - Cost calculations remain accurate.
 
-## Pass Criteria
-Partial shipment transfers synchronize correctly.
-
-## Fail Criteria
-Partial shipment data does not match between systems.
-
-## Risks / Assumptions
-Partial transfer functionality must be enabled.
-
-## Known Issues / Notes
-Expected behavior from screenshot:  
-Transfer IN inserted into Central and matching Transfer OUT created at other store.
-
 ---
 
 # Scenario: Transfer OUT - Standard
-
-## Business Entity
-Transfer Out
-
-## Business Purpose
-Verify that standard Transfer OUT transactions synchronize correctly to Central.
-
-## Trigger
-User creates or modifies a Transfer OUT transaction.
 
 ## Preconditions
 - Inventory items exist.
@@ -262,27 +167,9 @@ Transfer OUT transactions are inserted, updated, or deleted in Central.
 - Transfer OUT record exists in Central.
 - Data consistency between Store and Central.
 
-## Pass Criteria
-Transfer OUT records synchronize correctly.
-
-## Fail Criteria
-Records missing or inconsistent in Central.
-
-## Known Issues / Notes
-Actual Result: Insert/Delete/update into Central.
-
 ---
 
 # Scenario: Transfer OUT - Inter Store
-
-## Business Entity
-Transfer Out
-
-## Business Purpose
-Validate synchronization of inter-store Transfer OUT transactions.
-
-## Trigger
-User creates or modifies an inter-store Transfer OUT.
 
 ## Preconditions
 - Two stores configured.
@@ -309,27 +196,9 @@ Transfer OUT transactions synchronize to Central.
 - Transfer record exists in Central.
 - Item quantities match.
 
-## Pass Criteria
-Inter-store Transfer OUT records synchronize correctly.
-
-## Fail Criteria
-Central does not reflect transfer.
-
-## Known Issues / Notes
-Actual Result: Insert/Delete/update into Central.
-
 ---
 
 # Scenario: Transfer OUT - Supplier
-
-## Business Entity
-Transfer Out
-
-## Business Purpose
-Verify that supplier Transfer OUT transactions synchronize correctly.
-
-## Trigger
-User creates or updates a supplier Transfer OUT transaction.
 
 ## Preconditions
 - Supplier exists in the system.
@@ -355,24 +224,9 @@ Transfer OUT transactions synchronize with Central.
 - Supplier transfer record exists in Central.
 - Item data matches.
 
-## Pass Criteria
-Supplier transfers synchronize correctly.
-
-## Fail Criteria
-Missing or incorrect records in Central.
-
-## Known Issues / Notes
-Actual Result: Insert/Delete/update into Central.
-
 ---
 
 # Scenario: Transfer OUT - Inter Store End-to-End Flow (Fully Shipped)
-
-## Business Entity
-Transfer Out / Transfer In
-
-## Business Purpose
-Validate that a full shipment inter-store Transfer OUT creates a matching Transfer IN in Central.
 
 ## Execution Steps
 1. Create a Transfer OUT from Store A.
@@ -389,21 +243,9 @@ Validate that a full shipment inter-store Transfer OUT creates a matching Transf
 - Both transfer records exist in Central.
 - Costs match between transfers.
 
-## Pass Criteria
-Full shipment transfers synchronize correctly.
-
-## Fail Criteria
-Missing or mismatched transfer records.
-
 ---
 
 # Scenario: Transfer OUT - Inter Store End-to-End Flow (Partially Shipped)
-
-## Business Entity
-Transfer Out / Transfer In
-
-## Business Purpose
-Validate that partially shipped inter-store transfers synchronize correctly.
 
 ## Execution Steps
 1. Create Transfer OUT from Store A.
@@ -419,9 +261,3 @@ Validate that partially shipped inter-store transfers synchronize correctly.
 ## Validation Checks
 - Partial quantities match across systems.
 - Cost calculations remain consistent.
-
-## Pass Criteria
-Partial transfer shipments synchronize correctly.
-
-## Fail Criteria
-Central contains incorrect transfer quantities or costs.

@@ -13,15 +13,6 @@ Priority: Unknown
 
 # Scenario: Shipping Methods Synchronization to Selected Stores
 
-## Business Entity
-Shipping Methods
-
-## Business Purpose
-Ensure that Shipping Methods configured in Central Manager synchronize correctly to selected Store Groups so that purchasing, receiving, and transfer operations can use consistent shipping configurations across stores.
-
-## Trigger
-A user creates or updates a Shipping Method in Central Manager.
-
 ## Preconditions
 - Central and Store synchronization services are active.
 - At least one Store Group exists.
@@ -53,18 +44,3 @@ Central Manager → Setup → Inventory/Purchasing → Shipping Methods
 - Shipping Method exists in store configuration.
 - Shipping Method name and code match Central.
 - Shipping Method is available for purchasing and transfer operations.
-
-## Pass Criteria
-- Shipping Method appears in store configuration with correct data.
-
-## Fail Criteria
-- Shipping Method missing from store configuration.
-- Data mismatch between Central and Store.
-- Shipping Method unavailable during purchasing workflows.
-
-## Risks / Assumptions
-- Synchronization timing may depend on configured sync intervals.
-- Shipping methods may depend on supplier or purchasing configurations.
-
-## Known Issues / Notes
-- Actual Result observed: Pass insert/update

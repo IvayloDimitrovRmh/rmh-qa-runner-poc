@@ -13,15 +13,6 @@ Priority: Unknown
 
 # Scenario: Purchasers Synchronization to Selected Stores
 
-## Business Entity
-Purchasers
-
-## Business Purpose
-Ensure that Purchasers configured in Central Manager synchronize correctly to selected Store Groups so that purchasing responsibilities and supplier interactions remain consistent across all stores.
-
-## Trigger
-A user creates or updates a Purchaser in Central Manager.
-
 ## Preconditions
 - Central and Store synchronization services are active.
 - At least one Store Group exists.
@@ -53,18 +44,3 @@ Central Manager → Setup → Inventory/Purchasing → Purchasers
 - Purchaser exists in store configuration.
 - Purchaser name and identifier match Central.
 - Purchaser is available when creating purchasing documents.
-
-## Pass Criteria
-- Purchaser appears in store configuration with correct data.
-
-## Fail Criteria
-- Purchaser missing from store configuration.
-- Data mismatch between Central and Store.
-- Purchaser unavailable during purchasing workflows.
-
-## Risks / Assumptions
-- Synchronization timing may depend on configured sync intervals.
-- Purchasers may depend on supplier configuration.
-
-## Known Issues / Notes
-- Actual Result observed: Pass insert/update

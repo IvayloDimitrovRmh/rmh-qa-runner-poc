@@ -13,15 +13,6 @@ Priority: Unknown
 
 # Scenario: Payment Terms Synchronization to Selected Stores
 
-## Business Entity
-Payment Terms
-
-## Business Purpose
-Ensure that Payment Terms configured in Central Manager synchronize correctly to the selected Store Groups so that purchasing and supplier payment conditions remain consistent across all stores.
-
-## Trigger
-A user creates or updates Payment Terms in Central Manager.
-
 ## Preconditions
 - Central and Store synchronization services are active.
 - At least one Store Group exists.
@@ -54,18 +45,3 @@ Central Manager → Setup → Inventory/Purchasing → Payment Terms
 - Payment Term exists in store configuration.
 - Name and payment rules match Central.
 - Payment Term is available for purchasing transactions.
-
-## Pass Criteria
-- Payment Terms appear in store configuration with correct data.
-
-## Fail Criteria
-- Payment Terms missing from store configuration.
-- Data mismatch between Central and Store.
-- Payment Terms unavailable during purchasing workflows.
-
-## Risks / Assumptions
-- Synchronization timing may depend on configured sync intervals.
-- Payment Terms may depend on supplier configuration.
-
-## Known Issues / Notes
-- Actual Result observed: Pass insert/update

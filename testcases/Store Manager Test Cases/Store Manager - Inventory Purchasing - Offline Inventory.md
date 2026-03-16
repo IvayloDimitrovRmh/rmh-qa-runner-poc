@@ -13,15 +13,6 @@ Priority: 15
 
 # Scenario: Offline Inventory Quantity Synchronization
 
-## Business Entity
-Offline Inventory
-
-## Business Purpose
-Ensure that quantity updates performed through Offline Inventory processes in Store are synchronized correctly to Central so that inventory quantities remain consistent across systems even when operations occur offline.
-
-## Trigger
-A user performs an Offline Inventory quantity adjustment in Store.
-
 ## Preconditions
 - Store is configured to allow Offline Inventory operations.
 - Synchronization service between Store and Central is active.
@@ -55,31 +46,11 @@ Store Manager → Inventory/Purchasing → Offline Inventory
 - Updated item quantity appears in Central.
 - Quantity values match between Store and Central.
 - No synchronization errors occur.
-
-## Pass Criteria
-- Central reflects the updated quantity from the Offline Inventory operation.
-
-## Fail Criteria
-- Quantity updates do not appear in Central.
-- Quantities differ between Store and Central.
-
-## Risks / Assumptions
-- Offline operations may delay synchronization until connectivity is restored.
-- Sync timing may vary depending on system configuration.
 
 ---
 
 # Scenario: Offline Inventory Quantity Synchronization
 
-## Business Entity
-Offline Inventory
-
-## Business Purpose
-Ensure that quantity updates performed through Offline Inventory processes in Store are synchronized correctly to Central so that inventory quantities remain consistent across systems even when operations occur offline.
-
-## Trigger
-A user performs an Offline Inventory quantity adjustment in Store.
-
 ## Preconditions
 - Store is configured to allow Offline Inventory operations.
 - Synchronization service between Store and Central is active.
@@ -114,29 +85,9 @@ Store Manager → Inventory/Purchasing → Offline Inventory
 - Quantity values match between Store and Central.
 - No synchronization errors occur.
 
-## Pass Criteria
-- Central reflects the updated quantity from the Offline Inventory operation.
-
-## Fail Criteria
-- Quantity updates do not appear in Central.
-- Quantities differ between Store and Central.
-
-## Risks / Assumptions
-- Offline operations may delay synchronization until connectivity is restored.
-- Sync timing may vary depending on system configuration.
-
 ---
 
 # Scenario: Offline Inventory Quantity Synchronization to Main Store
-
-## Business Entity
-Offline Inventory – To Main
-
-## Business Purpose
-Ensure that Offline Inventory adjustments designated for the main store synchronize correctly to Central so that the main inventory location reflects accurate stock quantities.
-
-## Trigger
-A user performs an Offline Inventory adjustment intended for the main store.
 
 ## Preconditions
 - Store is configured for Offline Inventory operations.
@@ -169,13 +120,3 @@ Store Manager → Inventory/Purchasing → Offline Inventory
 ## Validation Checks
 - Item quantity updates appear in Central.
 - Quantity values match the Store adjustments.
-
-## Pass Criteria
-- Central displays the updated quantities from the Offline Inventory adjustment.
-
-## Fail Criteria
-- Quantity updates fail to synchronize.
-- Inventory quantities differ between systems.
-
-## Risks / Assumptions
-- Offline operations may delay synchronization until network connectivity is restored.

@@ -13,15 +13,6 @@ Priority: Unknown
 
 # Scenario: Account Groups Synchronization to Stores
 
-## Business Entity
-Account Groups
-
-## Business Purpose
-Ensure that Account Group configurations defined in Central are synchronized to all active stores so accounts receivable transactions use consistent account grouping rules across locations.
-
-## Trigger
-A user creates or updates an Account Group configuration in Central Manager.
-
 ## Preconditions
 - Central and Store synchronization services are operational.
 - Active stores exist in the `Store` table.
@@ -50,33 +41,9 @@ Central Manager → Setup → Customer → Accounts Receivable → Account Group
 - Data values match those configured in Central.
 - No duplicate configuration records are created.
 
-## Pass Criteria
-- Account Group configuration successfully appears in all active store(s).
-
-## Fail Criteria
-- Configuration does not appear in store(s).
-- Data mismatch between Central and Store.
-- Synchronization fails.
-
-## Risks / Assumptions
-- Synchronization depends on active Central-to-Store synchronization services.
-- Active stores are determined from the `Store` table.
-
-## Known Issues / Notes
-None documented.
-
 ---
 
 # Scenario: Account Managers Synchronization to Stores
-
-## Business Entity
-Account Managers
-
-## Business Purpose
-Ensure that Account Manager configurations defined in Central are synchronized to all active stores so receivable account management and responsibility assignments remain consistent across the organization.
-
-## Trigger
-A user creates or updates an Account Manager configuration in Central Manager.
 
 ## Preconditions
 - Central and Store synchronization services are active.
@@ -105,18 +72,3 @@ Central Manager → Setup → Customer → Accounts Receivable → Account Manag
 - Account Manager records exist in store configuration.
 - Data matches Central configuration.
 - No duplicate configuration records are created.
-
-## Pass Criteria
-- Account Manager configuration successfully appears in all active store(s).
-
-## Fail Criteria
-- Configuration does not appear in store(s).
-- Data mismatch between Central and Store.
-- Synchronization fails.
-
-## Risks / Assumptions
-- Synchronization relies on Central-to-Store synchronization services.
-- Active stores are identified from the `Store` table.
-
-## Known Issues / Notes
-None documented.

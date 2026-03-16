@@ -27,7 +27,7 @@ Automation Candidate: Yes
 5. Open item `AutoLCode04` in **Merchandising > Items** and assign the created **Mix and Match discount scheme**.
 6. Open **POS** and add the item `AutoLCode04` to the cart the required number of times.
 
-## Validation Points
+## Validation Checks
 - Discount scheme appears in the item configuration.
 - Discounted price matches the configured **Reg. Price** value.
 - Discount is applied only when the required quantity threshold is met.
@@ -50,7 +50,7 @@ Automation Candidate: Yes
 3. Assign the discount scheme to item `AutoLCode04`.
 4. In **POS**, add item `AutoLCode04` the required number of times.
 
-## Validation Points
+## Validation Checks
 - Discount percentage applied correctly.
 - Discount appears only when required quantity is reached.
 
@@ -72,7 +72,7 @@ Automation Candidate: Yes
 3. Assign the discount scheme to item `AutoLCode04`.
 4. In **POS**, add the item the total quantity equal to **Buy + Get**.
 
-## Validation Points
+## Validation Checks
 - Correct number of items receive the discount.
 - Discount price matches the configured value.
 
@@ -94,6 +94,6 @@ Automation Candidate: Yes
 3. Assign the discount scheme to item `AutoLCode04`.
 4. In **POS**, add the item the total quantity equal to **Buy + Get**.
 
-## Validation Points
+## Validation Checks
 - Correct items receive the percentage discount.
 - Discount percentage matches configuration.

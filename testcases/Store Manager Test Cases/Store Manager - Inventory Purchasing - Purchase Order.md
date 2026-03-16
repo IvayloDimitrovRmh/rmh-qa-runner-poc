@@ -13,15 +13,6 @@ Priority: 1
 
 # Scenario: Purchase Order - Store / Customer Synchronization
 
-## Business Entity
-Purchase Order
-
-## Business Purpose
-Ensure that purchase orders created or modified in Store are properly synchronized to Central so that inventory purchasing operations remain consistent across the organization.
-
-## Trigger
-A purchase order is created, updated, or deleted in the Store system.
-
 ## Preconditions
 - Store and Central are connected and synchronization services are active.
 - Required suppliers, items, and stores exist in the system.
@@ -55,34 +46,9 @@ Store Manager → Inventory/Purchasing → Purchase Orders
 - Updates to the purchase order are reflected in Central.
 - No duplicate records are created.
 
-## Pass Criteria
-- Central contains an accurate copy of the Purchase Order created in Store.
-- Updates and deletions are reflected correctly.
-
-## Fail Criteria
-- Purchase Order does not appear in Central.
-- Data mismatch between Store and Central.
-- Duplicate or corrupted records appear.
-
-## Risks / Assumptions
-- Synchronization services must be active.
-- Network issues may delay sync operations.
-
-## Known Issues / Notes
-Actual Result: Insert/Delete/update into Central for both Store and Customer purchase orders.
-
 ---
 
 # Scenario: Purchase Order - Update Item Cost Synchronization
-
-## Business Entity
-Purchase Order
-
-## Business Purpose
-Verify that updating the cost of an item within a purchase order is correctly synchronized to Central.
-
-## Trigger
-User modifies the item cost within an existing purchase order in Store.
 
 ## Preconditions
 - Existing purchase order in Store.
@@ -111,31 +77,9 @@ Store Manager → Inventory/Purchasing → Purchase Orders
 - Item cost in Central matches the updated value from Store.
 - No additional purchase order records are created.
 
-## Pass Criteria
-- Item cost updates appear correctly in Central.
-
-## Fail Criteria
-- Cost changes do not appear in Central.
-- Central retains outdated cost values.
-
-## Risks / Assumptions
-- Cost fields are configured to synchronize between Store and Central.
-
-## Known Issues / Notes
-No specific issues documented in the screenshot.
-
 ---
 
 # Scenario: Purchase Order - Update Supplier Cost and Tax Rate Synchronization
-
-## Business Entity
-Purchase Order
-
-## Business Purpose
-Ensure that supplier cost and tax rate changes made within a purchase order are synchronized to Central.
-
-## Trigger
-User updates supplier cost or tax rate within a purchase order.
 
 ## Preconditions
 - Supplier configured in the system.
@@ -166,27 +110,9 @@ Store Manager → Inventory/Purchasing → Purchase Orders
 ## Pass Criteria
 - Supplier cost and tax rate updates appear correctly in Central.
 
-## Fail Criteria
-- Supplier cost or tax rate changes are not reflected in Central.
-
-## Risks / Assumptions
-- Tax configuration between Store and Central is aligned.
-
-## Known Issues / Notes
-None identified from the screenshot.
-
 ---
 
 # Scenario: Purchase Order - Update Item Price Synchronization
-
-## Business Entity
-Purchase Order
-
-## Business Purpose
-Validate that updating the item price in a purchase order is synchronized to Central.
-
-## Trigger
-User updates item pricing within an existing purchase order.
 
 ## Preconditions
 - Existing purchase order in Store.
@@ -211,15 +137,3 @@ Store Manager → Inventory/Purchasing → Purchase Orders
 ## Validation Checks
 - Item price matches between Store and Central.
 - No duplicate records are created.
-
-## Pass Criteria
-- Central reflects the updated item price.
-
-## Fail Criteria
-- Central shows outdated pricing information.
-
-## Risks / Assumptions
-- Pricing fields are configured for synchronization.
-
-## Known Issues / Notes
-None identified from the screenshot.

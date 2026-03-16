@@ -13,15 +13,6 @@ Priority: Unknown
 
 # Scenario: Items - Non Inventory Item Synchronization to Selected Stores
 
-## Business Entity
-Non Inventory Item
-
-## Business Purpose
-Ensure that Non-Inventory Items created or updated in Central Manager synchronize correctly to the selected Store Groups so that services, fees, or non-stock items are available consistently across stores.
-
-## Trigger
-A user creates or updates a Non-Inventory Item in Central Manager and assigns it to one or more Store Groups.
-
 ## Preconditions
 - Central and Store synchronization services are active.
 - At least one Store Group exists.
@@ -57,19 +48,3 @@ Central Manager → Merchandising → Items
 - Lookup Code and Description match Central.
 - Price matches Central configuration.
 - Store Group assignment correctly determines which stores receive the item.
-
-## Pass Criteria
-- Non-Inventory Item is successfully inserted or updated in the selected store(s).
-- Item data is consistent between Central and Store.
-
-## Fail Criteria
-- Item does not appear in the store.
-- Item data differs between Central and Store.
-- Synchronization fails or produces duplicate records.
-
-## Risks / Assumptions
-- Synchronization timing may depend on configured sync intervals.
-- Store must belong to the assigned Store Group to receive the item.
-
-## Known Issues / Notes
-- Actual Result observed: Pass insert/update

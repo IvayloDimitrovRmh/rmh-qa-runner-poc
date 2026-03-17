@@ -240,19 +240,7 @@ function getTimestamp(): string {
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}_${pad(d.getHours())}-${pad(d.getMinutes())}-${pad(d.getSeconds())}`;
 }
 
-/** Date folder name: YYYY-MM-DD */
-function getDateFolder(): string {
-  const d = new Date();
-  const pad = (n: number) => String(n).padStart(2, "0");
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
-}
 
-/** Time-only stamp: HH-mm-ss */
-function getTimeStamp(): string {
-  const d = new Date();
-  const pad = (n: number) => String(n).padStart(2, "0");
-  return `${pad(d.getHours())}-${pad(d.getMinutes())}-${pad(d.getSeconds())}`;
-}
 
 const PIE_SLICE_COLORS = ["#10b981", "#ef4444", "#f59e0b", "#94a3b8"] as const; // PASS, FAIL, BLOCKED, NOT RUN
 
@@ -2038,23 +2026,10 @@ export default function SuiteExecutionDashboard({ suite }: { suite: GeneratedSui
         <div className="mt-4 flex flex-wrap gap-2">
           <button
             type="button"
-            onClick={async () => {
+            onClick={() => {
               const html = buildExportHtml(suite, executionByTestId, getExecution, displayTitle);
-              const dateFolder = getDateFolder();
-              const filename = `${filenamePrefix(displayTitle)}-results-${getTimeStamp()}.html`;
-              try {
-                const res = await fetch("/api/export-results", {
-                  method: "POST",
-                  headers: { "Content-Type": "application/json" },
-                  body: JSON.stringify({ dateFolder, filename, html }),
-                });
-                if (!res.ok) {
-                  const data = await res.json().catch(() => ({}));
-                  window.alert(`Export failed: ${(data as { error?: string }).error || res.statusText}`);
-                }
-              } catch {
-                window.alert("Export failed: could not reach the server.");
-              }
+              const filename = `${filenamePrefix(displayTitle)}-results-${getTimestamp()}.html`;
+              downloadReport(html, filename);
             }}
             className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
           >

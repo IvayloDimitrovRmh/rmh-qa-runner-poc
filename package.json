@@ -1,5 +1,5 @@
 {
-  "name": "app",
+  "name": "rmh-qa-runner-poc",
   "version": "0.1.0",
   "private": true,
   "scripts": {

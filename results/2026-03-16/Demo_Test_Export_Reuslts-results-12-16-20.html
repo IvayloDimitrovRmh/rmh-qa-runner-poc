@@ -77,46 +77,54 @@
 </head>
 <body>
   <div class="report-container">
-    <div class="report-summary-card">
-      <ul>
-        <li><strong>Suite:</strong> Demo Test Export Reuslts</li>
-        <li><strong>Exported:</strong> 2026-03-16T10:16:20.973Z</li>
-        <li><strong>Files:</strong> 6</li>
-        <li><strong>Tests:</strong> 12</li>
-      </ul>
-    </div>
+    <!-- HEADER -->
+    <header class="report-header" style="padding: 2.5rem 0 1.5rem 0; text-align: center;">
+      <h1 style="font-size:2.2rem; font-weight:700; color:#1e293b; margin-bottom:0.5rem; letter-spacing:-0.02em;">Demo Test Export Reuslts</h1>
+      <div style="font-size:1rem; color:#475569; margin-bottom:0.5rem;">Execution Report</div>
+      <div style="font-size:0.95rem; color:#64748b;">Exported: <span style="font-weight:500;">2026-03-16 10:16:20</span></div>
+    </header>
 
-    <div class="report-card">
-      <div class="report-filters" id="report-filters" style="display:none;">
-        <span class="active-label">Active filters:</span>
-        <span class="active-list" id="report-active-filters"></span>
-        <button type="button" class="clear-btn" id="report-clear-filters">Clear all</button>
+    <!-- SUMMARY SECTION -->
+    <section class="report-summary-card" style="display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; background:#fff; border-radius:1rem; box-shadow:0 2px 8px rgba(0,0,0,0.04); padding:1.5rem 2rem; margin-bottom:2rem;">
+      <div style="flex:1; min-width:220px;">
+        <div style="font-size:1.1rem; font-weight:600; color:#334155; margin-bottom:0.5rem;">Suite Summary</div>
+        <div style="display:flex; gap:1.5rem; flex-wrap:wrap;">
+          <div><span style="color:#64748b;">Files:</span> <span style="font-weight:500; color:#1e293b;">6</span></div>
+          <div><span style="color:#64748b;">Tests:</span> <span style="font-weight:500; color:#1e293b;">12</span></div>
+        </div>
       </div>
-      <div class="report-charts">
-        <div class="report-pie-wrap"><svg class="report-pie" width="200" height="200" viewBox="0 0 200 200" aria-label="Execution status pie chart"><path fill="#10b981" d="M 100 100 L 100 20 A 80 80 0 0 1 140 30.7179676972449 Z" data-status="PASS" role="button" tabindex="0" style="cursor:pointer"/><path fill="#ef4444" d="M 100 100 L 140 30.7179676972449 A 80 80 0 0 1 169.28203230275508 59.999999999999986 Z" data-status="FAIL" role="button" tabindex="0" style="cursor:pointer"/><path fill="#f59e0b" d="M 100 100 L 169.28203230275508 59.999999999999986 A 80 80 0 0 1 180 99.99999999999999 Z" data-status="BLOCKED" role="button" tabindex="0" style="cursor:pointer"/><path fill="#94a3b8" d="M 100 100 L 180 99.99999999999999 A 80 80 0 1 1 99.99999999999999 20 Z" data-status="NOT RUN" role="button" tabindex="0" style="cursor:pointer"/></svg></div>
-        <ul class="report-legend" id="report-legend">
-          <li data-status="PASS"><span class="swatch" style="background:#10b981"></span>PASS: 1</li>
-          <li data-status="FAIL"><span class="swatch" style="background:#ef4444"></span>FAIL: 1</li>
-          <li data-status="BLOCKED"><span class="swatch" style="background:#f59e0b"></span>BLOCKED: 1</li>
-          <li data-status="NOT RUN"><span class="swatch" style="background:#94a3b8"></span>NOT RUN: 9</li>
-        </ul>
-        <div class="report-bar-chart" id="report-bar-chart"><div class="report-bar-row" data-status="PASS" role="button" tabindex="0"><span class="report-bar-label">PASS</span><div class="report-bar-wrap"><div class="report-bar" style="width:8.333333333333332%;background:#10b981"></div></div><span class="report-bar-count">1</span></div><div class="report-bar-row" data-status="FAIL" role="button" tabindex="0"><span class="report-bar-label">FAIL</span><div class="report-bar-wrap"><div class="report-bar" style="width:8.333333333333332%;background:#ef4444"></div></div><span class="report-bar-count">1</span></div><div class="report-bar-row" data-status="BLOCKED" role="button" tabindex="0"><span class="report-bar-label">BLOCKED</span><div class="report-bar-wrap"><div class="report-bar" style="width:8.333333333333332%;background:#f59e0b"></div></div><span class="report-bar-count">1</span></div><div class="report-bar-row" data-status="NOT RUN" role="button" tabindex="0"><span class="report-bar-label">NOT RUN</span><div class="report-bar-wrap"><div class="report-bar" style="width:75%;background:#94a3b8"></div></div><span class="report-bar-count">9</span></div></div>
+      <div style="flex:1; min-width:220px;">
+        <div style="font-size:1.1rem; font-weight:600; color:#334155; margin-bottom:0.5rem;">Status Breakdown</div>
+        <div style="display:flex; gap:1rem; flex-wrap:wrap;">
+          <span class="report-status-badge report-status-badge-pass" style="font-size:0.95rem;">PASS: 1</span>
+          <span class="report-status-badge report-status-badge-fail" style="font-size:0.95rem;">FAIL: 1</span>
+          <span class="report-status-badge report-status-badge-blocked" style="font-size:0.95rem;">BLOCKED: 1</span>
+          <span class="report-status-badge report-status-badge-not-run" style="font-size:0.95rem;">NOT RUN: 9</span>
+        </div>
       </div>
-    </div>
+    </section>
 
-    <div class="report-card report-summary">
-      <h2>Execution summary</h2>
-      <ul>
-        <li><strong>Total:</strong> 12</li>
-        <li><strong>Passed:</strong> 1</li>
-        <li><strong>Failed:</strong> 1</li>
-        <li><strong>Blocked:</strong> 1</li>
-        <li><strong>Not run:</strong> 9</li>
+    <!-- PIE CHART SECTION -->
+    <section style="display:flex; flex-direction:column; align-items:center; justify-content:center; margin-bottom:2rem;">
+      <div class="report-pie-wrap" style="margin-bottom:1rem;">
+        <svg class="report-pie" width="180" height="180" viewBox="0 0 200 200" aria-label="Execution status pie chart" style="display:block;margin:auto;">
+          <path fill="#10b981" d="M 100 100 L 100 20 A 80 80 0 0 1 140 30.7179676972449 Z" data-status="PASS" role="button" tabindex="0" style="cursor:pointer"/>
+          <path fill="#ef4444" d="M 100 100 L 140 30.7179676972449 A 80 80 0 0 1 169.28203230275508 59.999999999999986 Z" data-status="FAIL" role="button" tabindex="0" style="cursor:pointer"/>
+          <path fill="#f59e0b" d="M 100 100 L 169.28203230275508 59.999999999999986 A 80 80 0 0 1 180 99.99999999999999 Z" data-status="BLOCKED" role="button" tabindex="0" style="cursor:pointer"/>
+          <path fill="#94a3b8" d="M 100 100 L 180 99.99999999999999 A 80 80 0 1 1 99.99999999999999 20 Z" data-status="NOT RUN" role="button" tabindex="0" style="cursor:pointer"/>
+        </svg>
+      </div>
+      <ul class="report-legend" id="report-legend" style="justify-content:center;">
+        <li data-status="PASS"><span class="swatch" style="background:#10b981"></span>PASS: 1</li>
+        <li data-status="FAIL"><span class="swatch" style="background:#ef4444"></span>FAIL: 1</li>
+        <li data-status="BLOCKED"><span class="swatch" style="background:#f59e0b"></span>BLOCKED: 1</li>
+        <li data-status="NOT RUN"><span class="swatch" style="background:#94a3b8"></span>NOT RUN: 9</li>
       </ul>
-    </div>
+    </section>
 
-    <div class="report-card">
-      <div class="report-chip-toolbar" id="report-chip-toolbar">
+    <!-- TEST RESULTS SECTION -->
+    <section class="report-card" style="background:#fff; border-radius:1rem; box-shadow:0 2px 8px rgba(0,0,0,0.04); padding:2rem; margin-bottom:2rem;">
+      <div class="report-chip-toolbar" id="report-chip-toolbar" style="margin-bottom:1rem;">
         <button type="button" class="report-chip report-chip-active" data-status="All" id="report-chip-all">All</button>
         <button type="button" class="report-chip" data-status="PASS">PASS</button>
         <button type="button" class="report-chip" data-status="FAIL">FAIL</button>
@@ -124,18 +132,18 @@
         <button type="button" class="report-chip" data-status="NOT RUN">NOT RUN</button>
       </div>
       <div class="report-table-wrap">
-      <table class="report-table" id="report-table">
-        <thead>
-          <tr>
-            <th>Test ID</th>
-            <th>Test Case Name</th>
-            <th>Source File</th>
-            <th>Status</th>
-            <th>Comment</th>
-            <th>Attachment</th>
-          </tr>
-        </thead>
-        <tbody>
+        <table class="report-table" id="report-table" style="background:#fff; border-radius:0.5rem;">
+          <thead>
+            <tr style="background:#f8fafc;">
+              <th style="font-size:0.95rem; font-weight:600; color:#475569;">Test ID</th>
+              <th style="font-size:0.95rem; font-weight:600; color:#475569;">Test Case Name</th>
+              <th style="font-size:0.95rem; font-weight:600; color:#475569;">Source File</th>
+              <th style="font-size:0.95rem; font-weight:600; color:#475569;">Status</th>
+              <th style="font-size:0.95rem; font-weight:600; color:#475569;">Comment</th>
+              <th style="font-size:0.95rem; font-weight:600; color:#475569;">Attachment</th>
+            </tr>
+          </thead>
+          <tbody>
 <tr data-status="PASS" data-test-id="T03">
         <td class="report-cell-id">T03</td>
         <td class="report-cell-name">Insert or Update Suppliers in Selected Stores</td>

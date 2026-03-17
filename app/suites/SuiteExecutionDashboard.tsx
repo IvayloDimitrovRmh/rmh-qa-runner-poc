@@ -12,11 +12,21 @@ import {
 
 export type ExecutionStatus = "NOT RUN" | "PASS" | "FAIL" | "BLOCKED";
 
+export interface QAAttachment {
+  id: string;
+  name: string;
+  type: string;
+  size: number;
+  note?: string;
+  dataUrl: string;
+}
+
 export interface ExecutionState {
   testId: string;
   status: ExecutionStatus;
   comment: string;
   attachment: string;
+  attachments?: QAAttachment[];
 }
 
 const STATUS_OPTIONS: ExecutionStatus[] = ["NOT RUN", "PASS", "FAIL", "BLOCKED"];
@@ -24,7 +34,7 @@ const FILTER_OPTIONS = ["ALL", ...STATUS_OPTIONS] as const;
 export type StatusFilter = (typeof FILTER_OPTIONS)[number];
 
 function getDefaultExecution(testId: string): ExecutionState {
-  return { testId, status: "NOT RUN", comment: "", attachment: "" };
+  return { testId, status: "NOT RUN", comment: "", attachment: "", attachments: [] };
 }
 
 /** Parsed attachment: either plain text or an uploaded image (name + data URL) */
@@ -180,6 +190,7 @@ function loadFromStorage(searchText: string): LoadedSuiteState {
           status: ex.status,
           comment: ex.comment,
           attachment: ex.attachment,
+          attachments: Array.isArray((ex as any).attachments) ? (ex as any).attachments : [],
         };
       }
     }
@@ -196,10 +207,19 @@ function saveToStorage(
 ): void {
   if (typeof window === "undefined" || !window.localStorage) return;
   try {
+    // Ensure attachments are included in persisted state
+    const normalizedState: Record<string, ExecutionState> = {};
+    for (const key of Object.keys(state)) {
+      const ex = state[key];
+      normalizedState[key] = {
+        ...ex,
+        attachments: Array.isArray(ex.attachments) ? ex.attachments : [],
+      };
+    }
     const payload =
       displayTitle !== undefined && displayTitle !== searchText
-        ? { executionState: state, suiteName: displayTitle }
-        : { executionState: state, suiteName: searchText };
+        ? { executionState: normalizedState, suiteName: displayTitle }
+        : { executionState: normalizedState, suiteName: searchText };
     window.localStorage.setItem(getStorageKey(searchText), JSON.stringify(payload));
   } catch {
     // ignore quota or other errors
@@ -460,7 +480,7 @@ function getReportPageScript(): string {
   function esc(s) { if (!s) return ""; return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;"); }
   function downloadProgress(asHtml) {
     if (!payload) return;
-    var exportPayload = { suiteName: payload.suiteName, exportedAt: payload.exportedAt || new Date().toISOString(), executionState: payload.executionState };
+    var exportPayload = { suiteName: payload.suiteName, exportedAt: payload.exportedAt || new Date().toISOString(), executionState: payload.executionState, testCases: payload.testCases || [] };
     var str = JSON.stringify(exportPayload, null, 2);
     var blob;
     if (asHtml) {
@@ -479,9 +499,7 @@ function getReportPageScript(): string {
     URL.revokeObjectURL(a.href);
   }
   var dlJson = document.getElementById("report-dl-json");
-  var dlHtml = document.getElementById("report-dl-html");
   if (dlJson) dlJson.addEventListener("click", function(){ downloadProgress(false); });
-  if (dlHtml) dlHtml.addEventListener("click", function(){ downloadProgress(true); });
 })();
 `.replace(/\n/g, " ").trim();
 }
@@ -549,7 +567,7 @@ function buildOfflineRunnerHtml(
   <style>
     * { box-sizing: border-box; }
     body { font-family: system-ui, sans-serif; background: #f8fafc; color: #0f172a; margin: 0; padding: 1rem; }
-    .container { max-width: 56rem; margin: 0 auto; }
+    .container { max-width: 80rem; margin: 0 auto; }
     h1 { font-size: 1.25rem; margin: 0 0 0.5rem; }
     .meta { font-size: 0.875rem; color: #64748b; margin-bottom: 1.5rem; }
     .card { background: #fff; border: 1px solid #e2e8f0; border-radius: 0.75rem; padding: 1.25rem; margin-bottom: 1rem; box-shadow: 0 1px 2px rgba(0,0,0,0.05); }
@@ -703,7 +721,7 @@ function getOfflineRunnerScript(): string {
   }
 
   function downloadProgress(asHtml){
-    var payloadExport = { suiteName: payload.suiteName, exportedAt: new Date().toISOString(), executionState: executionState };
+    var payloadExport = { suiteName: payload.suiteName, exportedAt: new Date().toISOString(), executionState: executionState, testCases: payload.testCases || [] };
     var str = JSON.stringify(payloadExport, null, 2);
     if (asHtml) {
       var enc = btoa(unescape(encodeURIComponent(str)));
@@ -726,12 +744,11 @@ function getOfflineRunnerScript(): string {
     + "<div class=\\"summary-card\\" id=\\"rmh-summary\\"></div>"
     + "<div class=\\"summary-card\\" id=\\"rmh-chart\\"></div>"
     + "<div id=\\"rmh-cards\\"></div>"
-    + "<div class=\\"download-section\\"><h2>Download progress for import</h2><p>Use one of these to save your work and import it later in the main RMH QA Suite Runner.</p><button type=\\"button\\" class=\\"btn btn-primary\\" id=\\"rmh-dl-json\\">Download as JSON</button><button type=\\"button\\" class=\\"btn\\" id=\\"rmh-dl-html\\">Download as HTML</button></div>";
+    + "<div class=\\"download-section\\"><h2>Download progress for import</h2><p>Use one of these to save your work and import it later in the main RMH QA Suite Runner.</p><button type=\\"button\\" class=\\"btn btn-primary\\" id=\\"rmh-dl-json\\">Download as JSON</button></div>";
   renderSummary();
   renderChart();
   renderCards();
   document.getElementById("rmh-dl-json").onclick = function(){ downloadProgress(false); };
-  document.getElementById("rmh-dl-html").onclick = function(){ downloadProgress(true); };
 })();
 `.replace(/\n/g, " ").trim();
 }
@@ -770,14 +787,31 @@ function buildExportHtml(
     { label: "NOT RUN", count: notRun, color: PIE_SLICE_COLORS[3], status: "NOT RUN" },
   ];
 
-  function attachmentCellHtml(attachment: string): string {
-    const parsed = parseAttachment(attachment);
-    if (parsed.type === "image") {
-      const src = escapeHtml(parsed.data);
-      const name = escapeHtml(parsed.name);
-      return `<button type="button" class="report-attachment-img" data-src="${src.replace(/"/g, "&quot;")}" title="Click to preview"><img src="${src}" alt="${name}" class="report-thumb"/><span class="report-attachment-name">${name}</span></button>`;
+  function attachmentCellHtml(ex: ExecutionState): string {
+    // Support multiple attachments
+    const attachments = Array.isArray(ex.attachments) ? ex.attachments : [];
+    if (attachments.length === 0) {
+      // Fallback to legacy single attachment
+      const parsed = parseAttachment(ex.attachment);
+      if (parsed.type === "image") {
+        const src = escapeHtml(parsed.data);
+        const name = escapeHtml(parsed.name);
+        return `<button type="button" class="report-attachment-img" data-src="${src.replace(/"/g, "&quot;")}" title="Click to preview"><img src="${src}" alt="${name}" class="report-thumb"/><span class="report-attachment-name">${name}</span></button>`;
+      }
+      return `<span class="report-attachment-text">${escapeHtml(parsed.value)}</span>`;
     }
-    return `<span class="report-attachment-text">${escapeHtml(parsed.value)}</span>`;
+    // Render all attachments
+    return attachments
+      .map(att => {
+        if (att.type.startsWith("image/")) {
+          const src = escapeHtml(att.dataUrl);
+          const name = escapeHtml(att.name);
+          return `<button type="button" class="report-attachment-img" data-src="${src.replace(/"/g, "&quot;")}" title="Click to preview"><img src="${src}" alt="${name}" class="report-thumb" style="max-width:48px;max-height:32px;border-radius:6px;border:1px solid #e2e8f0;margin-right:4px;margin-bottom:2px;"/><span class="report-attachment-name">${name}</span></button>`;
+        }
+        // Non-image: render as file chip
+        return `<span class="report-attachment-chip" style="display:inline-block;padding:2px 6px;border-radius:4px;background:#f1f5f9;border:1px solid #e2e8f0;font-size:11px;margin-right:4px;margin-bottom:2px;">${escapeHtml(att.name)}</span>`;
+      })
+      .join("");
   }
 
   const rows = suite.testCases
@@ -796,7 +830,7 @@ function buildExportHtml(
         <td class="report-cell-source">${escapeHtml(sourceBasename)}</td>
         <td class="report-cell-status"><span class="report-status-badge ${badgeClass}">${escapeHtml(ex.status)}</span></td>
         <td class="report-cell-comment">${commentHtml}</td>
-        <td class="report-cell-attachment">${attachmentCellHtml(ex.attachment)}</td>
+        <td class="report-cell-attachment">${attachmentCellHtml(ex)}</td>
       </tr>`;
     })
     .join("\n");
@@ -810,7 +844,13 @@ function buildExportHtml(
     .join("");
 
   const reportScript = getReportPageScript();
-  const exportedAt = new Date().toISOString();
+  const exportedAt = (() => {
+    const d = new Date();
+    const months = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+    const hh = String(d.getHours()).padStart(2, "0");
+    const mm = String(d.getMinutes()).padStart(2, "0");
+    return `${months[d.getMonth()]} ${d.getDate()}, ${d.getFullYear()} \u2022 ${hh}:${mm}`;
+  })();
   const fileCount = suite.sourceFiles.length;
 
   return `<!DOCTYPE html>
@@ -820,13 +860,13 @@ function buildExportHtml(
   <title>Execution Report - ${escapeHtml(suiteName)}</title>
   <style>
     * { box-sizing: border-box; }
-    body { font-family: system-ui, sans-serif; background: #f8fafc; color: #0f172a; margin: 0; padding: 1rem; }
-    .report-container { max-width: 56rem; margin: 0 auto; }
-    .report-summary-card { background: #fff; border: 1px solid #e2e8f0; border-radius: 0.75rem; padding: 1rem 1.25rem; margin-bottom: 1rem; box-shadow: 0 1px 2px rgba(0,0,0,0.05); }
-    .report-summary-card ul { list-style: none; padding: 0; margin: 0; display: flex; flex-wrap: wrap; gap: 1rem 1.5rem; font-size: 0.875rem; color: #475569; }
+    body { font-family: system-ui, sans-serif; background: #f1f5f9; color: #0f172a; margin: 0; padding: 1.5rem 1rem; }
+    .report-container { max-width: 80rem; margin: 0 auto; }
+    .report-summary-card { background: #fff; border: 1px solid #e2e8f0; border-radius: 0.75rem; padding: 1.25rem 1.5rem; margin-bottom: 1.75rem; box-shadow: 0 1px 3px rgba(0,0,0,0.07), 0 1px 2px rgba(0,0,0,0.04); }
+    .report-summary-card ul { list-style: none; padding: 0; margin: 0; display: flex; flex-wrap: wrap; gap: 1rem 2rem; font-size: 0.875rem; color: #475569; }
     .report-summary-card strong { color: #0f172a; }
-    .report-card { background: #fff; border: 1px solid #e2e8f0; border-radius: 0.75rem; padding: 1.25rem; margin-bottom: 1rem; box-shadow: 0 1px 2px rgba(0,0,0,0.05); }
-    .report-card h2 { font-size: 0.75rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: #64748b; margin: 0 0 0.75rem; }
+    .report-card { background: #fff; border: 1px solid #e2e8f0; border-radius: 0.75rem; padding: 1.5rem; margin-bottom: 1.75rem; box-shadow: 0 1px 3px rgba(0,0,0,0.07), 0 1px 2px rgba(0,0,0,0.04); }
+    .report-card h2 { font-size: 0.8125rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: #334155; margin: 0 0 1rem; padding-bottom: 0.625rem; border-bottom: 1px solid #f1f5f9; }
     .report-charts { display: flex; flex-wrap: wrap; gap: 1.5rem; align-items: flex-start; margin-bottom: 0.5rem; }
     .report-pie-wrap { flex-shrink: 0; }
     .report-pie path:hover { opacity: 0.9; }
@@ -853,20 +893,23 @@ function buildExportHtml(
     .report-chip { padding: 0.375rem 0.75rem; font-size: 0.8125rem; font-weight: 500; border-radius: 9999px; border: 1px solid #cbd5e1; background: #fff; color: #475569; cursor: pointer; }
     .report-chip:hover { background: #f8fafc; color: #0f172a; border-color: #94a3b8; }
     .report-chip.report-chip-active { background: #2563eb; border-color: #2563eb; color: #fff; }
-    .report-table-wrap { overflow: auto; max-height: 60vh; }
-    .report-table { width: 100%; border-collapse: collapse; font-size: 0.875rem; }
-    .report-table th, .report-table td { border: 1px solid #e2e8f0; padding: 0.5rem 0.75rem; text-align: left; }
-    .report-table thead th { position: sticky; top: 0; background: #f8fafc; font-weight: 600; color: #475569; z-index: 1; box-shadow: 0 1px 0 0 #e2e8f0; }
-    .report-table tbody tr:hover { background: #f8fafc; }
+    .report-table-wrap { overflow-x: auto; }
+    .report-table { width: 100%; border-collapse: collapse; font-size: 0.875rem; table-layout: auto; }
+    .report-table th, .report-table td { border: 1px solid #e2e8f0; padding: 0.625rem 0.875rem; text-align: left; vertical-align: top; }
+    .report-table thead th { position: sticky; top: 0; background: #f1f5f9; font-weight: 600; color: #334155; z-index: 1; box-shadow: 0 1px 0 0 #cbd5e1; white-space: nowrap; }
+    .report-table tbody tr:nth-child(even) { background: #f8fafc; }
+    .report-table tbody tr:hover { background: #eff6ff; }
     .report-table tbody tr.report-row-hidden { display: none; }
+    .report-col-id { width: 8rem; }
+    .report-col-name { width: 22rem; }
     .report-cell-id { font-family: ui-monospace, monospace; font-size: 0.8125rem; }
     .report-edit-status { width: 100%; min-width: 5.5rem; padding: 0.375rem 0.5rem; font-size: 0.8125rem; border: 1px solid #cbd5e1; border-radius: 0.375rem; background: #fff; color: #0f172a; }
     .report-edit-comment { width: 100%; min-height: 2.5rem; padding: 0.375rem 0.5rem; font-size: 0.8125rem; border: 1px solid #cbd5e1; border-radius: 0.375rem; background: #fff; color: #0f172a; resize: vertical; font-family: inherit; }
-    .report-status-badge { display: inline-block; padding: 0.25rem 0.625rem; border-radius: 9999px; font-size: 0.75rem; font-weight: 600; letter-spacing: 0.025em; white-space: nowrap; }
-    .report-status-badge-pass { background: #d1fae5; color: #065f46; }
-    .report-status-badge-fail { background: #fee2e2; color: #991b1b; }
-    .report-status-badge-blocked { background: #fef3c7; color: #92400e; }
-    .report-status-badge-not-run { background: #f1f5f9; color: #475569; }
+    .report-status-badge { display: inline-flex; align-items: center; padding: 0.3rem 0.75rem; border-radius: 9999px; font-size: 0.75rem; font-weight: 600; letter-spacing: 0.025em; white-space: nowrap; border: 1px solid transparent; }
+    .report-status-badge-pass { background: #d1fae5; color: #065f46; border-color: #a7f3d0; }
+    .report-status-badge-fail { background: #fee2e2; color: #991b1b; border-color: #fecaca; }
+    .report-status-badge-blocked { background: #fef3c7; color: #92400e; border-color: #fde68a; }
+    .report-status-badge-not-run { background: #f1f5f9; color: #475569; border-color: #e2e8f0; }
     .report-comment-text { font-size: 0.8125rem; color: #0f172a; white-space: pre-wrap; word-break: break-word; }
     .report-comment-empty { font-size: 0.8125rem; color: #94a3b8; }
     .report-cell-attachment { max-width: 12rem; }
@@ -881,8 +924,8 @@ function buildExportHtml(
     .report-lightbox-inner img { max-width: 85vw; max-height: 85vh; object-fit: contain; display: block; }
     .report-lightbox-close { position: absolute; top: 0.5rem; right: 0.5rem; width: 2rem; height: 2rem; border: none; background: #f1f5f9; color: #475569; border-radius: 0.5rem; cursor: pointer; font-size: 1.25rem; line-height: 1; }
     .report-lightbox-close:hover { background: #e2e8f0; color: #0f172a; }
-    .report-download-section { background: #fff; border: 1px solid #e2e8f0; border-radius: 0.75rem; padding: 1rem 1.25rem; margin-top: 1rem; box-shadow: 0 1px 2px rgba(0,0,0,0.05); }
-    .report-download-section h2 { font-size: 0.875rem; font-weight: 600; color: #0f172a; margin: 0 0 0.5rem; }
+    .report-download-section { background: #fff; border: 1px solid #e2e8f0; border-radius: 0.75rem; padding: 1.5rem; margin-top: 1.75rem; box-shadow: 0 1px 3px rgba(0,0,0,0.07), 0 1px 2px rgba(0,0,0,0.04); }
+    .report-download-section h2 { font-size: 0.8125rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: #334155; margin: 0 0 0.5rem; padding-bottom: 0.625rem; border-bottom: 1px solid #f1f5f9; }
     .report-download-section p { font-size: 0.8125rem; color: #64748b; margin: 0 0 0.75rem; }
     .report-download-section .report-dl-btn { display: inline-block; padding: 0.5rem 1rem; border-radius: 0.5rem; font-size: 0.875rem; font-weight: 500; cursor: pointer; border: 1px solid #cbd5e1; background: #fff; margin-right: 0.5rem; margin-bottom: 0.5rem; color: #475569; }
     .report-download-section .report-dl-btn:hover { background: #f8fafc; color: #0f172a; }
@@ -942,8 +985,8 @@ function buildExportHtml(
       <table class="report-table" id="report-table">
         <thead>
           <tr>
-            <th>Test ID</th>
-            <th>Test Case Name</th>
+            <th class="report-col-id">Test ID</th>
+            <th class="report-col-name">Test Case Name</th>
             <th>Source File</th>
             <th>Status</th>
             <th>Comment</th>
@@ -961,7 +1004,6 @@ ${rows}
       <h2>Download progress for import</h2>
       <p>Use one of these to download the execution state for import into the main RMH QA Suite Runner.</p>
       <button type="button" class="report-dl-btn report-dl-btn-primary" id="report-dl-json">Download as JSON</button>
-      <button type="button" class="report-dl-btn" id="report-dl-html">Download as HTML</button>
     </div>
   </div>
 
@@ -976,6 +1018,12 @@ ${rows}
     suiteName,
     exportedAt: new Date().toISOString(),
     executionState: executionByTestId,
+    testCases: suite.testCases.map((tc) => ({
+      id: tc.id,
+      testCaseName: tc.testCaseName,
+      sourceFile: tc.sourceFile,
+      scenarioContent: tc.scenarioContent,
+    })),
   })}</script>
   <script>${reportScript}</script>
 </body>
@@ -1577,101 +1625,256 @@ function AttachmentField({
   onUpdate: (next: ExecutionState) => void;
 }) {
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const pasteTargetRef = useRef<HTMLDivElement>(null);
   const [lightboxOpen, setLightboxOpen] = useState(false);
   const parsed = parseAttachment(execution.attachment);
+  // Store attachments as serializable objects
+  type QAAttachment = {
+    id: string;
+    name: string;
+    type: string;
+    size: number;
+    dataUrl: string;
+  };
+  const [attachments, setAttachments] = useState<QAAttachment[]>(() => Array.isArray(execution.attachments) ? execution.attachments : []);
+  const [linkInput, setLinkInput] = useState("");
 
-  const handleFileChange = useCallback(
-    (e: React.ChangeEvent<HTMLInputElement>) => {
-      const file = e.target.files?.[0];
-      e.target.value = "";
-      if (!file || !file.type.startsWith("image/")) return;
-      const reader = new FileReader();
-      reader.onload = () => {
-        const data = reader.result;
-        if (typeof data !== "string") return;
-        const payload = buildImageAttachmentPayload(file.name, file.type || "image/png", data);
-        onUpdate({ ...execution, attachment: payload });
-      };
-      reader.readAsDataURL(file);
-    },
-    [execution, onUpdate]
-  );
+  // Sync attachments to parent only after state changes, not during render
+  useEffect(() => {
+    if (Array.isArray(execution.attachments)) {
+      setAttachments(execution.attachments);
+    }
+  }, [execution.attachments]);
 
-  const handleRemoveImage = useCallback(() => {
-    onUpdate({ ...execution, attachment: "" });
-  }, [execution, onUpdate]);
+  useEffect(() => {
+    // Notify parent only after attachments change
+    if (attachments !== execution.attachments) {
+      onUpdate({ ...execution, attachments });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [attachments]);
+  // Generic URL validation
+  function isValidUrl(url: string) {
+    try {
+      const u = new URL(url);
+      return u.protocol === "http:" || u.protocol === "https:";
+    } catch {
+      return false;
+    }
+  }
+  // Handle link input Enter
+  const handleLinkInputKeyDown = useCallback((e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "Enter") {
+      const url = linkInput.trim();
+      if (url && isValidUrl(url)) {
+        e.preventDefault();
+        const hostname = (() => {
+          try {
+            const u = new URL(url);
+            return u.hostname;
+          } catch {
+            return url;
+          }
+        })();
+        setAttachments(prev => [
+          ...prev,
+          {
+            id: `link-${Date.now()}-${Math.random().toString(36).slice(2,8)}`,
+            name: hostname,
+            type: "link",
+            size: url.length,
+            dataUrl: "",
+            url,
+          } as any,
+        ]);
+        setLinkInput("");
+      }
+    }
+  }, [linkInput]);
+
+  // SAFE: file input handler for multiple, store as serializable objects
+  const handleFileChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files ? Array.from(e.target.files) : [];
+    e.target.value = "";
+    if (files.length) {
+      files.forEach(file => {
+        const reader = new FileReader();
+        reader.onload = () => {
+          const dataUrl = reader.result as string;
+          const newAttachment: QAAttachment = {
+            id: `${file.name}-${Date.now()}-${Math.random().toString(36).slice(2,8)}`,
+            name: file.name,
+            type: file.type,
+            size: file.size,
+            dataUrl,
+          };
+          setAttachments(prev => [...prev, newAttachment]);
+        };
+        reader.readAsDataURL(file);
+      });
+    }
+  }, []);
+
+  // Remove handler for attachments
+  const removeAttachment = useCallback((index: number) => {
+    setAttachments(prev => prev.filter((_, i) => i !== index));
+  }, []);
+
+  // Paste handler: append as serializable objects
+  const handlePaste = useCallback((e: React.ClipboardEvent<HTMLDivElement>) => {
+    const items = e.clipboardData?.items;
+    if (!items) return;
+    for (let i = 0; i < items.length; i++) {
+      const item = items[i];
+      if (item.kind === "file" && item.type.startsWith("image/")) {
+        const blob = item.getAsFile();
+        if (blob) {
+          const ts = Date.now();
+          const ext = blob.type === "image/png" ? "png" : blob.type === "image/jpeg" ? "jpg" : "img";
+          const file = new File([blob], `screenshot-${ts}.${ext}`, { type: blob.type });
+          const reader = new FileReader();
+          reader.onload = () => {
+            const dataUrl = reader.result as string;
+            const newAttachment: QAAttachment = {
+              id: `${file.name}-${ts}-${Math.random().toString(36).slice(2,8)}`,
+              name: file.name,
+              type: file.type,
+              size: file.size,
+              dataUrl,
+            };
+            setAttachments(prev => [...prev, newAttachment]);
+          };
+          reader.readAsDataURL(file);
+        }
+      }
+    }
+    e.preventDefault();
+  }, []);
+
+  // Focus the paste target when the area is clicked (for accessibility)
+  const handlePasteTargetClick = useCallback(() => {
+    pasteTargetRef.current?.focus();
+  }, []);
+
+  // ...existing code...
+  // Modal preview for image attachments
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [previewName, setPreviewName] = useState<string | null>(null);
+  const handlePreview = (attachment: QAAttachment) => {
+    if (attachment.type.startsWith("image/")) {
+      setPreviewUrl(attachment.dataUrl);
+      setPreviewName(attachment.name);
+    }
+  };
+  const closePreview = () => {
+    setPreviewUrl(null);
+    setPreviewName(null);
+  };
 
   return (
-    <div className="mb-4">
-      <label className="mb-1 block text-sm font-medium text-slate-600">
-        Attachment
-      </label>
-      <input
-        ref={fileInputRef}
-        type="file"
-        accept={ACCEPTED_IMAGE_TYPES}
-        className="hidden"
-        onChange={handleFileChange}
-        aria-hidden
-      />
-      {parsed.type === "image" ? (
-        <div className="flex flex-wrap items-center gap-3 rounded-lg border border-slate-200 bg-slate-50/50 p-3">
-          <button
-            type="button"
-            onClick={() => setLightboxOpen(true)}
-            className="h-16 w-16 shrink-0 overflow-hidden rounded border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500/50"
-            aria-label="View full size"
-          >
-            <img
-              src={parsed.data}
-              alt={parsed.name}
-              className="h-full w-full object-cover"
-            />
-          </button>
-          <ImageLightbox
-            src={parsed.data}
-            alt={parsed.name}
-            open={lightboxOpen}
-            onClose={() => setLightboxOpen(false)}
-          />
-          <div className="min-w-0 flex-1">
-            <p className="truncate text-sm font-medium text-slate-800">{parsed.name}</p>
-            <div className="mt-1 flex gap-2">
-              <button
-                type="button"
-                onClick={() => fileInputRef.current?.click()}
-                className="text-xs font-medium text-blue-600 hover:text-blue-700 focus:outline-none"
-              >
-                Replace
-              </button>
-              <button
-                type="button"
-                onClick={handleRemoveImage}
-                className="text-xs font-medium text-slate-600 hover:text-slate-700 focus:outline-none"
-              >
-                Remove
-              </button>
-            </div>
-          </div>
-        </div>
-      ) : (
-        <div className="flex flex-wrap items-center gap-2">
+    <div className="mb-3">
+      <label className="mb-1 block text-sm font-semibold text-slate-700">Attachments</label>
+      <div
+        ref={pasteTargetRef}
+        tabIndex={0}
+        onPaste={handlePaste}
+        className="group/attachment-paste-area focus-within:ring-2 focus-within:ring-blue-500/30 rounded-xl border border-slate-200 bg-slate-50/60 px-4 py-3"
+        aria-label="Attachment area. Paste screenshot with Ctrl+V or upload an image."
+      >
+        <div className="flex items-center gap-1 mb-1">
           <input
             type="text"
-            value={parsed.value}
-            onChange={(e) => onUpdate({ ...execution, attachment: e.target.value })}
-            placeholder="Bug ID or note (optional)"
-            className="flex-1 min-w-0 rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 placeholder-slate-400 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+            value={linkInput}
+            onChange={e => setLinkInput(e.target.value)}
+            onKeyDown={handleLinkInputKeyDown}
+            placeholder="Paste screenshot with Ctrl+V or upload an image"
+            className="flex-1 h-9 rounded-lg border border-slate-300 bg-white px-2 py-1.5 text-xs text-slate-900 placeholder-slate-400 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+            autoFocus={false}
           />
           <button
             type="button"
             onClick={() => fileInputRef.current?.click()}
-            className="shrink-0 rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-medium text-slate-700 shadow-sm hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+            className="shrink-0 h-9 rounded-lg border border-blue-500 bg-blue-50 px-2 py-1.5 text-xs font-medium text-blue-700 shadow-sm hover:bg-blue-100 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
           >
             Upload image
           </button>
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept={ACCEPTED_IMAGE_TYPES}
+            className="hidden"
+            onChange={handleFileChange}
+            multiple
+            aria-hidden
+          />
         </div>
-      )}
+        {/* Helper text moved to input placeholder. */}
+        {attachments.length > 0 && (
+          <div className="grid grid-flow-row auto-cols-min grid-cols-[repeat(auto-fit,minmax(0,min-content))] justify-start gap-x-2.5 gap-y-3.5 mt-2">
+            {attachments.map((attachment, index) => (
+              <div
+                key={attachment.id}
+                className="group flex flex-col items-center justify-center rounded border border-slate-200 bg-white shadow-sm p-[2px] hover:border-blue-400 transition-all duration-150 cursor-pointer relative w-auto max-w-[70px] hover:scale-[1.03] hover:shadow-md"
+                tabIndex={0}
+                aria-label={`Preview ${attachment.name}`}
+                onClick={() => {
+                  if (attachment.type === "image" || attachment.type.startsWith("image/")) {
+                    handlePreview(attachment);
+                  } else if (attachment.type === "link" && attachment.url) {
+                    window.open(attachment.url, "_blank", "noopener,noreferrer");
+                  }
+                }}
+              >
+                {attachment.type === "image" || attachment.type.startsWith("image/") ? (
+                  <div className="flex items-center justify-center w-full">
+                    <img
+                      src={attachment.dataUrl}
+                      alt={attachment.name}
+                      className="max-h-8 object-contain rounded mx-auto"
+                      style={{ pointerEvents: "none" }}
+                    />
+                  </div>
+                ) : attachment.type === "link" ? (
+                  <div className="flex items-center justify-center w-full max-h-8 bg-blue-100 rounded mx-auto">
+                    <svg width="14" height="14" fill="none" viewBox="0 0 16 16"><path stroke="#2563eb" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" d="M7.5 2.5h-2A3 3 0 0 0 2.5 7.5v2A3 3 0 0 0 7.5 13.5h2A3 3 0 0 0 13.5 8.5v-2"/><path stroke="#2563eb" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" d="M9.5 2.5h4v4"/><path stroke="#2563eb" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" d="M9.5 6.5l4-4"/></svg>
+                  </div>
+                ) : (
+                  <div className="flex items-center justify-center w-full max-h-8 bg-slate-100 rounded mx-auto">
+                    <span className="text-[9px] text-slate-500">File</span>
+                  </div>
+                )}
+                <span className="truncate text-[9px] font-medium text-slate-700 mt-0 w-full text-center leading-tight">
+                  {attachment.type === "link" && attachment.url ? attachment.url.replace(/^https?:\/\//, "").split("/")[0] : attachment.name}
+                </span>
+                <button
+                  type="button"
+                  onClick={e => { e.stopPropagation(); removeAttachment(index); }}
+                  className="absolute top-0 right-0 w-3.5 h-3.5 rounded-full bg-slate-100 hover:bg-red-100 p-0.5 text-[9px] text-red-400 shadow-sm focus:outline-none"
+                  aria-label={`Remove ${attachment.name}`}
+                  style={{ fontSize: '9px' }}
+                >
+                  <svg width="9" height="9" fill="none" viewBox="0 0 16 16"><path stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" d="M4 4l8 8M12 4l-8 8"/></svg>
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+        {previewUrl && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">
+            <div className="bg-white rounded-xl shadow-lg p-6 relative max-w-md w-full flex flex-col items-center">
+              <img src={previewUrl} alt={previewName || "Preview"} className="max-h-80 rounded-lg mb-4" />
+              <span className="text-sm font-medium text-slate-700 mb-2">{previewName}</span>
+              <button
+                type="button"
+                onClick={closePreview}
+                className="mt-2 px-4 py-2 rounded-lg bg-blue-600 text-white text-sm font-semibold hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
     </div>
   );
 }
@@ -1682,12 +1885,20 @@ function TestCaseCard({
   onUpdate,
   isExpanded,
   onToggleExpand,
+  isFullExpanded,
+  onExpandAll,
+  onCollapseAll,
+  isFocusView = false,
 }: {
   tc: TestCaseDefinition;
   execution: ExecutionState;
   onUpdate: (next: ExecutionState) => void;
   isExpanded: boolean;
   onToggleExpand: () => void;
+  isFullExpanded: boolean;
+  onExpandAll: () => void;
+  onCollapseAll: () => void;
+  isFocusView?: boolean;
 }) {
   return (
     <article className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
@@ -1696,16 +1907,27 @@ function TestCaseCard({
           <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">
             Scenario content — <span className="font-mono">{tc.id}</span>
           </span>
-          <button
-            type="button"
-            onClick={onToggleExpand}
-            className="text-sm font-medium text-blue-600 hover:text-blue-700 focus:outline-none"
-          >
-            {isExpanded ? "Collapse" : "Expand"}
-          </button>
+          {!isFocusView && (
+            <button
+              type="button"
+              onClick={(isFullExpanded && isExpanded) ? onCollapseAll : onExpandAll}
+              className="text-sm font-medium text-blue-600 hover:text-blue-700 focus:outline-none"
+            >
+              {(isFullExpanded && isExpanded) ? "Collapse" : "Expand"}
+            </button>
+          )}
         </div>
         {isExpanded ? (
-          <ScenarioContentRenderer content={tc.scenarioContent} />
+          <>
+            <ScenarioContentRenderer content={tc.scenarioContent} />
+            <button
+              type="button"
+              onClick={onToggleExpand}
+              className="mt-2 text-sm font-medium text-blue-600 hover:text-blue-700 focus:outline-none"
+            >
+              Hide details
+            </button>
+          </>
         ) : (
           (() => {
             const { title } = getCollapsedScenarioDisplay(tc.scenarioContent);
@@ -1730,41 +1952,108 @@ function TestCaseCard({
       </div>
 
       <div className="mb-4 flex flex-wrap items-center gap-3">
-        <label className="flex items-center gap-2 text-sm text-slate-600">
-          Status
-          <select
-            value={execution.status}
-            onChange={(e) =>
-              onUpdate({ ...execution, status: e.target.value as ExecutionStatus })
-            }
-            className="rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-sm text-slate-900 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
-          >
-            {STATUS_OPTIONS.map((s) => (
-              <option key={s} value={s}>
-                {s}
-              </option>
-            ))}
-          </select>
-        </label>
+        <div className="flex items-center gap-2 text-sm text-slate-600">
+          <span className="font-medium mr-1">Status</span>
+          <div className="flex rounded-xl bg-white/95 border border-slate-100 shadow-sm px-1 py-0.5">
+            {STATUS_OPTIONS.map((s, i) => {
+              const selected = execution.status === s;
+              // Selected: floating pill, soft colored bg, shadow, rounded-full
+              // Unselected: transparent bg, colored/neutral text
+              let color = '';
+              if (s === 'PASS') color = selected
+                ? 'bg-green-200/90 text-green-900 shadow-lg border border-green-300'
+                : 'bg-transparent text-green-700 hover:bg-green-50';
+              else if (s === 'FAIL') color = selected
+                ? 'bg-red-200/90 text-red-900 shadow-lg border border-red-300'
+                : 'bg-transparent text-red-700 hover:bg-red-50';
+              else if (s === 'BLOCKED') color = selected
+                ? 'bg-amber-200/90 text-amber-900 shadow-lg border border-amber-300'
+                : 'bg-transparent text-amber-800 hover:bg-amber-50';
+              else color = selected
+                ? 'bg-slate-200/90 text-slate-900 shadow-lg border border-slate-300'
+                : 'bg-transparent text-slate-600 hover:bg-slate-50';
+              // Button base style
+              let base = 'relative min-w-[68px] px-4 py-1.5 text-xs font-semibold rounded-full focus:outline-none transition-all duration-200 cursor-pointer flex items-center justify-center';
+              // Remove divider for pill look
+              let divider = '';
+              // Selected: slightly elevated, floating pill
+              let selectedRing = selected ? 'z-10 scale-105' : '';
+              // Typography
+              let font = selected ? 'font-bold' : 'font-semibold';
+              // Focus/hover polish
+              let focus = 'focus:z-20 focus:ring-2 focus:ring-blue-300';
+              // Muted semantic color for unselected text
+              let textMuted = '';
+              if (!selected) {
+                if (s === 'PASS') textMuted = 'text-green-600';
+                else if (s === 'FAIL') textMuted = 'text-red-600';
+                else if (s === 'BLOCKED') textMuted = 'text-amber-700';
+                else textMuted = 'text-slate-500';
+              }
+              return (
+                <button
+                  key={s}
+                  type="button"
+                  className={[
+                    base,
+                    color,
+                    divider,
+                    selectedRing,
+                    font,
+                    focus,
+                    textMuted
+                  ].join(' ')}
+                  aria-pressed={selected}
+                  tabIndex={0}
+                  style={{
+                    marginLeft: i !== 0 ? '0.25rem' : undefined,
+                  }}
+                  onClick={() => onUpdate({ ...execution, status: s })}
+                >
+                  {s}
+                </button>
+              );
+            })}
+          </div>
+        </div>
       </div>
 
-      <div className="mb-4">
-        <label className="mb-1 block text-sm font-medium text-slate-600">Comment</label>
-        <textarea
-          value={execution.comment}
-          onChange={(e) => onUpdate({ ...execution, comment: e.target.value })}
-          placeholder="Optional"
-          rows={2}
-          className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 placeholder-slate-400 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
-        />
-      </div>
-
-      <AttachmentField execution={execution} onUpdate={onUpdate} />
+      {(isFullExpanded || isFocusView) && (
+        <div className="qa-expand-in">
+          <div className="mb-4">
+            <label className="mb-1 block text-sm font-medium text-slate-600">Comment</label>
+            <textarea
+              value={execution.comment}
+              onChange={(e) => onUpdate({ ...execution, comment: e.target.value })}
+              placeholder="Optional"
+              rows={2}
+              className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 placeholder-slate-400 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+            />
+          </div>
+          <AttachmentField execution={execution} onUpdate={onUpdate} />
+        </div>
+      )}
     </article>
   );
 }
 
 export default function SuiteExecutionDashboard({ suite }: { suite: GeneratedSuite }) {
+    // Pagination state
+    const [pageSize, setPageSize] = useState(() => {
+      try {
+        const raw = sessionStorage.getItem(`qa-ui:${suite.suiteName}`);
+        if (raw) { const s = JSON.parse(raw); if (typeof s.pageSize === "number" && [5,10,20].includes(s.pageSize)) return s.pageSize; }
+      } catch { /* ignore */ }
+      return 5;
+    });
+    const [page, setPage] = useState(() => {
+      try {
+        const raw = sessionStorage.getItem(`qa-ui:${suite.suiteName}`);
+        if (raw) { const s = JSON.parse(raw); if (typeof s.page === "number" && s.page >= 0) return s.page; }
+      } catch { /* ignore */ }
+      return 0;
+    });
+
   const [session, setSession] = useState<LoadedSuiteState>(() => {
     const l = loadFromStorage(suite.suiteName);
     return {
@@ -1794,6 +2083,42 @@ export default function SuiteExecutionDashboard({ suite }: { suite: GeneratedSui
   const [selectedStatuses, setSelectedStatuses] = useState<Set<ExecutionStatus>>(new Set());
   const [textSearch, setTextSearch] = useState("");
   const [expandedByTestId, setExpandedByTestId] = useState<Record<string, boolean>>({});
+  const [fullExpandedByTestId, setFullExpandedByTestId] = useState<Record<string, boolean>>({});
+  const [autoExpandedOnceIds, setAutoExpandedOnceIds] = useState<Set<string>>(new Set());
+  const [currentView, setCurrentView] = useState<"list" | "focus">(() => {
+    try {
+      const raw = sessionStorage.getItem(`qa-ui:${suite.suiteName}`);
+      if (raw) { const s = JSON.parse(raw); if (s.view === "list" || s.view === "focus") return s.view; }
+    } catch { /* ignore */ }
+    return "list";
+  });
+  const [focusIndex, setFocusIndex] = useState(() => {
+    try {
+      const raw = sessionStorage.getItem(`qa-ui:${suite.suiteName}`);
+      if (raw) {
+        const s = JSON.parse(raw);
+        if (typeof s.focusId === "string") {
+          const idx = suite.testCases.findIndex((tc) => tc.id === s.focusId);
+          if (idx !== -1) return idx;
+        }
+        if (typeof s.focusIndex === "number" && s.focusIndex >= 0 && s.focusIndex < suite.testCases.length) return s.focusIndex;
+      }
+    } catch { /* ignore */ }
+    return 0;
+  });
+  const [focusSlideDir, setFocusSlideDir] = useState<"next" | "prev">("next");
+  const [focusAnimKey, setFocusAnimKey] = useState(0);
+  const focusAnimRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const el = focusAnimRef.current;
+    if (!el) return;
+    const cls = focusSlideDir === "next" ? "focus-slide-next" : "focus-slide-prev";
+    el.classList.remove("focus-slide-next", "focus-slide-prev");
+    void el.offsetWidth; // force reflow to re-trigger the animation
+    el.classList.add(cls);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [focusAnimKey]);
 
   const getExecution = useCallback(
     (testId: string): ExecutionState => {
@@ -1841,6 +2166,122 @@ export default function SuiteExecutionDashboard({ suite }: { suite: GeneratedSui
       ? statusFiltered
       : statusFiltered.filter((tc) => testMatchesSearch(tc, searchTrimmed));
 
+  // Clamp page if pageSize or visibleTests changes
+  useEffect(() => {
+    setPage((prev) => {
+      const maxPage = Math.max(0, Math.ceil(visibleTests.length / pageSize) - 1);
+      return Math.min(prev, maxPage);
+    });
+  }, [pageSize, visibleTests.length]);
+
+  // Persist UI view state to sessionStorage (tab-only)
+  useEffect(() => {
+    try {
+      const focusedTc = visibleTests[Math.min(focusIndex, visibleTests.length - 1)];
+      sessionStorage.setItem(`qa-ui:${suite.suiteName}`, JSON.stringify({
+        view: currentView,
+        page,
+        pageSize,
+        focusIndex,
+        focusId: focusedTc?.id ?? null,
+      }));
+    } catch { /* ignore quota/security errors */ }
+  }, [currentView, page, pageSize, focusIndex, suite.suiteName, visibleTests]);
+
+  const paginatedTests = visibleTests.slice(page * pageSize, page * pageSize + pageSize);
+  const totalPages = Math.max(1, Math.ceil(visibleTests.length / pageSize));
+  const from = visibleTests.length === 0 ? 0 : page * pageSize + 1;
+  const to = Math.min((page + 1) * pageSize, visibleTests.length);
+
+  function PaginationControls() {
+    return (
+      <div className="flex items-center gap-2 mb-2">
+        <span className="text-xs text-slate-500">
+          Showing {from}–{to} of {visibleTests.length} test{visibleTests.length === 1 ? '' : 's'}
+        </span>
+        <label className="text-xs text-slate-500 flex items-center gap-1">
+          Page size
+          <select
+            className="rounded border border-slate-200 bg-white px-1.5 py-0.5 text-xs focus:outline-none focus:ring-2 focus:ring-blue-200"
+            value={pageSize}
+            onChange={e => { setPageSize(Number(e.target.value)); setPage(0); }}
+          >
+            {[5, 10, 20].map(sz => <option key={sz} value={sz}>{sz}</option>)}
+          </select>
+        </label>
+        <button
+          type="button"
+          className="rounded px-2 py-1 text-xs font-medium text-slate-600 hover:bg-slate-100 disabled:opacity-40"
+          onClick={() => setPage(p => Math.max(0, p - 1))}
+          disabled={page === 0}
+          aria-label="Previous page"
+        >
+          Previous
+        </button>
+        {/* Page numbers if simple */}
+        {totalPages <= 7 ? (
+          <div className="flex gap-1">
+            {Array.from({ length: totalPages }, (_, i) => (
+              <button
+                key={i}
+                type="button"
+                className={`rounded px-2 py-1 text-xs font-medium ${i === page ? 'bg-blue-100 text-blue-700' : 'text-slate-600 hover:bg-slate-100'}`}
+                onClick={() => setPage(i)}
+                aria-current={i === page ? 'page' : undefined}
+              >
+                {i + 1}
+              </button>
+            ))}
+          </div>
+        ) : (
+          <span className="text-xs text-slate-500">Page {page + 1} of {totalPages}</span>
+        )}
+        <button
+          type="button"
+          className="rounded px-2 py-1 text-xs font-medium text-slate-600 hover:bg-slate-100 disabled:opacity-40"
+          onClick={() => setPage(p => Math.min(totalPages - 1, p + 1))}
+          disabled={page >= totalPages - 1}
+          aria-label="Next page"
+        >
+          Next
+        </button>
+        <div className="ml-auto flex items-center rounded-md border border-slate-200 bg-slate-100/70 p-0.5" role="group" aria-label="View mode">
+          <button
+            type="button"
+            onClick={() => setCurrentView("list")}
+            aria-pressed={currentView === "list"}
+            className={`inline-flex items-center gap-1 rounded px-2.5 py-1 text-xs font-medium transition-all duration-150 focus:outline-none focus:ring-2 focus:ring-blue-500/30 ${
+              currentView === "list"
+                ? "bg-white text-slate-800 shadow-sm"
+                : "text-slate-500 hover:text-slate-700"
+            }`}
+          >
+            <svg className="h-3 w-3 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden>
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 10h16M4 14h16M4 18h16" />
+            </svg>
+            List
+          </button>
+          <button
+            type="button"
+            onClick={() => setCurrentView("focus")}
+            aria-pressed={currentView === "focus"}
+            className={`inline-flex items-center gap-1 rounded px-2.5 py-1 text-xs font-medium transition-all duration-150 focus:outline-none focus:ring-2 focus:ring-blue-500/30 ${
+              currentView === "focus"
+                ? "bg-white text-slate-800 shadow-sm"
+                : "text-slate-500 hover:text-slate-700"
+            }`}
+          >
+            <svg className="h-3 w-3 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden>
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+            </svg>
+            Focus
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   useEffect(() => {
     const l = loadFromStorage(suite.suiteName);
     setSession({
@@ -1873,8 +2314,19 @@ export default function SuiteExecutionDashboard({ suite }: { suite: GeneratedSui
   ]);
 
   const updateExecution = useCallback((next: ExecutionState) => {
+    const prevStatus = executionByTestId[next.testId]?.status ?? "NOT RUN";
+    // Auto-expand comments & attachments once when transitioning from NOT RUN to FAIL/BLOCKED
+    if (
+      (next.status === "FAIL" || next.status === "BLOCKED") &&
+      prevStatus === "NOT RUN" &&
+      !autoExpandedOnceIds.has(next.testId) &&
+      !fullExpandedByTestId[next.testId]
+    ) {
+      setAutoExpandedOnceIds((prev) => new Set([...prev, next.testId]));
+      setFullExpandedByTestId((prev) => ({ ...prev, [next.testId]: true }));
+    }
     setExecutionByTestId((prev) => ({ ...prev, [next.testId]: next }));
-  }, []);
+  }, [executionByTestId, autoExpandedOnceIds, fullExpandedByTestId]);
 
   const handleClearProgress = useCallback(() => {
     clearStorage(suite.suiteName);
@@ -1882,16 +2334,17 @@ export default function SuiteExecutionDashboard({ suite }: { suite: GeneratedSui
   }, [suite.suiteName]);
 
   const expandAll = useCallback(() => {
-    setExpandedByTestId(
-      suite.testCases.reduce<Record<string, boolean>>((acc, tc) => {
-        acc[tc.id] = true;
-        return acc;
-      }, {})
-    );
+    const all = suite.testCases.reduce<Record<string, boolean>>((acc, tc) => {
+      acc[tc.id] = true;
+      return acc;
+    }, {});
+    setExpandedByTestId(all);
+    setFullExpandedByTestId(all);
   }, [suite.testCases]);
 
   const collapseAll = useCallback(() => {
     setExpandedByTestId({});
+    setFullExpandedByTestId({});
   }, []);
 
   const saveProgress = useCallback(() => {
@@ -1903,11 +2356,6 @@ export default function SuiteExecutionDashboard({ suite }: { suite: GeneratedSui
     };
     downloadJson(payload, `${filenamePrefix(displayTitle)}-progress-${getTimestamp()}.json`);
   }, [displayTitle, suite.sourceFiles, executionByTestId]);
-
-  const exportHtml = useCallback(() => {
-    const html = buildOfflineRunnerHtml(suite, executionByTestId, displayTitle);
-    downloadReport(html, `${filenamePrefix(displayTitle)}-progress-${getTimestamp()}.html`);
-  }, [suite, executionByTestId, displayTitle]);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -2024,62 +2472,95 @@ export default function SuiteExecutionDashboard({ suite }: { suite: GeneratedSui
     return () => document.removeEventListener("keydown", onKeyDown);
   }, [editingTitle, saveTitle, cancelEditingTitle]);
 
+  useEffect(() => {
+    if (currentView !== "focus") return;
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key !== "ArrowLeft" && e.key !== "ArrowRight") return;
+      const tag = (e.target as HTMLElement).tagName;
+      if (
+        tag === "INPUT" ||
+        tag === "TEXTAREA" ||
+        tag === "SELECT" ||
+        (e.target as HTMLElement).isContentEditable
+      ) return;
+      if (e.key === "ArrowLeft") {
+        setFocusSlideDir("prev");
+        setFocusAnimKey((k) => k + 1);
+        setFocusIndex((i) => Math.max(0, i - 1));
+      } else {
+        setFocusSlideDir("next");
+        setFocusAnimKey((k) => k + 1);
+        setFocusIndex((i) => Math.min(visibleTests.length - 1, i + 1));
+      }
+    };
+    document.addEventListener("keydown", onKeyDown);
+    return () => document.removeEventListener("keydown", onKeyDown);
+  }, [currentView, visibleTests.length]);
+
   return (
     <>
-      <section className="mb-8 rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
-        <div className="flex flex-wrap items-center gap-2">
-          {editingTitle ? (
-            <>
-              <span className="text-lg font-semibold text-slate-700">Suite:</span>
+      <section className="-mt-4 mb-6 rounded-2xl border border-slate-200 bg-white p-8 shadow-lg">
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center gap-3">
+            <button
+              type="button"
+              onClick={() => window.history.back()}
+              className="rounded-full bg-slate-100 p-2 text-slate-500 hover:bg-slate-200 hover:text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+              aria-label="Back"
+              title="Back"
+            >
+              <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden>
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+              </svg>
+            </button>
+            {editingTitle ? (
               <input
                 ref={titleInputRef}
                 type="text"
                 value={titleInputValue}
                 onChange={(e) => setTitleInputValue(e.target.value)}
                 onBlur={saveTitle}
-                className="flex-1 min-w-[12rem] rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-lg font-semibold text-slate-900 placeholder-slate-400 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+                className="min-w-[12rem] rounded-lg border border-slate-300 bg-white px-4 py-2 text-2xl font-bold text-slate-900 placeholder-slate-400 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
                 placeholder={suite.suiteName}
                 aria-label="Suite title"
               />
-            </>
-          ) : (
-            <>
-              <h2 className="text-lg font-semibold text-slate-900">
-                Suite: {displayTitle}
-              </h2>
-              <button
-                type="button"
-                onClick={startEditingTitle}
-                className="rounded p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-600 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
-                title="Edit suite title"
-                aria-label="Edit suite title"
-              >
-                <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden>
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
-                </svg>
-              </button>
-            </>
-          )}
-        </div>
-        <div className="mt-4 flex flex-wrap gap-2">
-          <button
-            type="button"
-            onClick={() => {
-              const html = buildExportHtml(suite, executionByTestId, getExecution, displayTitle);
-              const filename = `${filenamePrefix(displayTitle)}-results-${getTimestamp()}.html`;
-              downloadReport(html, filename);
-            }}
-            className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
-          >
-            Export Results
-          </button>
-          <button
-            type="button"
-            onClick={handleClearProgress}
-            className="rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 shadow-sm hover:bg-slate-50 hover:border-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
-          >
-            Clear saved progress
-          </button>
+            ) : (
+              <h1 className="text-2xl font-bold text-slate-900 tracking-tight">
+                {displayTitle}
+                <button
+                  type="button"
+                  onClick={startEditingTitle}
+                  className="ml-2 rounded p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-600 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+                  title="Edit suite title"
+                  aria-label="Edit suite title"
+                >
+                  <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden>
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+                  </svg>
+                </button>
+              </h1>
+            )}
+          </div>
+          <div className="flex gap-2">
+            <button
+              type="button"
+              onClick={() => {
+                const html = buildExportHtml(suite, executionByTestId, getExecution, displayTitle);
+                const filename = `${filenamePrefix(displayTitle)}-results-${getTimestamp()}.html`;
+                downloadReport(html, filename);
+              }}
+              className="rounded-lg bg-blue-600 px-5 py-2 text-sm font-semibold text-white shadow-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition"
+            >
+              Export Results
+            </button>
+            <button
+              type="button"
+              onClick={handleClearProgress}
+              className="rounded-lg border border-slate-300 bg-white px-5 py-2 text-sm font-semibold text-slate-700 shadow-md hover:bg-slate-50 hover:border-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition"
+            >
+              Clear Progress
+            </button>
+          </div>
         </div>
       </section>
 
@@ -2109,13 +2590,6 @@ export default function SuiteExecutionDashboard({ suite }: { suite: GeneratedSui
         </button>
         <button
           type="button"
-          onClick={exportHtml}
-          className="rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 shadow-sm hover:bg-slate-50 hover:border-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
-        >
-          Export HTML
-        </button>
-        <button
-          type="button"
           onClick={importProgress}
           className="rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 shadow-sm hover:bg-slate-50 hover:border-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
         >
@@ -2123,67 +2597,182 @@ export default function SuiteExecutionDashboard({ suite }: { suite: GeneratedSui
         </button>
       </div>
 
-      <div className="mb-6 flex flex-wrap items-center gap-3 rounded-xl border border-slate-200 bg-white px-4 py-3 shadow-sm">
-        <label className="flex items-center gap-2 text-sm text-slate-600">
-          Search in suite
-          <input
-            type="search"
-            value={textSearch}
-            onChange={(e) => setTextSearch(e.target.value)}
-            placeholder="Filter by text…"
-            className="rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-sm text-slate-900 placeholder-slate-400 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
-          />
-        </label>
-        <label className="flex items-center gap-2 text-sm text-slate-600">
-          Filter by status
-          <select
-            value={statusDropdownValue}
-            onChange={(e) => handleStatusDropdownChange(e.target.value)}
-            className="rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-sm text-slate-900 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+      <div className="mb-6 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-slate-200 bg-white px-4 py-3 shadow-sm">
+        <div className="flex flex-wrap items-center gap-3">
+          <label className="flex items-center gap-2 text-sm text-slate-600">
+            Search in suite
+            <input
+              type="search"
+              value={textSearch}
+              onChange={(e) => setTextSearch(e.target.value)}
+              placeholder="Filter by text…"
+              className="rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-sm text-slate-900 placeholder-slate-400 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+            />
+          </label>
+          <label className="flex items-center gap-2 text-sm text-slate-600">
+            Filter by status
+            <select
+              value={statusDropdownValue}
+              onChange={(e) => handleStatusDropdownChange(e.target.value)}
+              className="rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-sm text-slate-900 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+            >
+              <option value="ALL">All</option>
+              {STATUS_OPTIONS.map((opt) => (
+                <option key={opt} value={opt}>
+                  {opt}
+                </option>
+              ))}
+              <option value="MULTIPLE">Multiple</option>
+            </select>
+          </label>
+        </div>
+        <div className="flex items-center gap-3">
+          <button
+            type="button"
+            onClick={expandAll}
+            className="text-sm font-medium text-blue-600 hover:text-blue-700 focus:outline-none"
           >
-            <option value="ALL">All</option>
-            {STATUS_OPTIONS.map((opt) => (
-              <option key={opt} value={opt}>
-                {opt}
-              </option>
-            ))}
-            <option value="MULTIPLE">Multiple</option>
-          </select>
-        </label>
-        <span className="text-sm text-slate-500">
-          Showing {visibleTests.length} of {suite.testCases.length} tests
-        </span>
-        <span className="text-slate-300" aria-hidden>|</span>
-        <button
-          type="button"
-          onClick={expandAll}
-          className="text-sm font-medium text-blue-600 hover:text-blue-700 focus:outline-none"
-        >
-          Expand All
-        </button>
-        <button
-          type="button"
-          onClick={collapseAll}
-          className="text-sm font-medium text-blue-600 hover:text-blue-700 focus:outline-none"
-        >
-          Collapse All
-        </button>
+            Expand All
+          </button>
+          <button
+            type="button"
+            onClick={collapseAll}
+            className="text-sm font-medium text-blue-600 hover:text-blue-700 focus:outline-none"
+          >
+            Collapse All
+          </button>
+        </div>
       </div>
 
-      <div className="space-y-5">
-        {visibleTests.map((tc) => (
-          <TestCaseCard
-            key={tc.id}
-            tc={tc}
-            execution={getExecution(tc.id)}
-            onUpdate={updateExecution}
-            isExpanded={expandedByTestId[tc.id] === true}
-            onToggleExpand={() =>
-              setExpandedByTestId((prev) => ({ ...prev, [tc.id]: !prev[tc.id] }))
-            }
-          />
-        ))}
-      </div>
+      {currentView === "list" ? (
+        <div className="space-y-5">
+          {/* Top Pagination */}
+          <PaginationControls />
+          {/* Test Cases List */}
+          {paginatedTests.map((tc) => (
+            <TestCaseCard
+              key={tc.id}
+              tc={tc}
+              execution={getExecution(tc.id)}
+              onUpdate={updateExecution}
+              isExpanded={expandedByTestId[tc.id] === true}
+              onToggleExpand={() =>
+                setExpandedByTestId((prev) => ({ ...prev, [tc.id]: !prev[tc.id] }))
+              }
+              isFullExpanded={fullExpandedByTestId[tc.id] === true}
+              onExpandAll={() => {
+                setExpandedByTestId((prev) => ({ ...prev, [tc.id]: true }));
+                setFullExpandedByTestId((prev) => ({ ...prev, [tc.id]: true }));
+              }}
+              onCollapseAll={() => {
+                setExpandedByTestId((prev) => ({ ...prev, [tc.id]: false }));
+                setFullExpandedByTestId((prev) => ({ ...prev, [tc.id]: false }));
+              }}
+            />
+          ))}
+          {/* Bottom Pagination */}
+          <PaginationControls />
+        </div>
+      ) : (
+        <div className="space-y-4">
+          {visibleTests.length === 0 ? (
+            <p className="py-12 text-center text-sm text-slate-500">No tests match the current filters.</p>
+          ) : (
+            <>
+              <div className="flex items-center justify-between px-1">
+                {/* Left: counter */}
+                <span className="text-xs font-medium text-slate-500 w-24">
+                  Test {focusIndex + 1} of {visibleTests.length}
+                </span>
+                {/* Center: navigation */}
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => { setFocusSlideDir("prev"); setFocusAnimKey((k) => k + 1); setFocusIndex((i) => Math.max(0, i - 1)); }}
+                    disabled={focusIndex === 0}
+                    className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-600 shadow-sm hover:bg-slate-50 disabled:opacity-40 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+                  >
+                    ← Previous
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => { setFocusSlideDir("next"); setFocusAnimKey((k) => k + 1); setFocusIndex((i) => Math.min(visibleTests.length - 1, i + 1)); }}
+                    disabled={focusIndex >= visibleTests.length - 1}
+                    className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-600 shadow-sm hover:bg-slate-50 disabled:opacity-40 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+                  >
+                    Next →
+                  </button>
+                </div>
+                {/* Right: view toggle */}
+                <div className="flex w-24 justify-end">
+                  <div className="flex items-center rounded-md border border-slate-200 bg-slate-100/70 p-0.5" role="group" aria-label="View mode">
+                    <button
+                      type="button"
+                      onClick={() => setCurrentView("list")}
+                      aria-pressed={currentView === "list"}
+                      className={`inline-flex items-center gap-1 rounded px-2.5 py-1 text-xs font-medium transition-all duration-150 focus:outline-none focus:ring-2 focus:ring-blue-500/30 ${
+                        currentView === "list"
+                          ? "bg-white text-slate-800 shadow-sm"
+                          : "text-slate-500 hover:text-slate-700"
+                      }`}
+                    >
+                      <svg className="h-3 w-3 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden>
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 10h16M4 14h16M4 18h16" />
+                      </svg>
+                      List
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setCurrentView("focus")}
+                      aria-pressed={currentView === "focus"}
+                      className={`inline-flex items-center gap-1 rounded px-2.5 py-1 text-xs font-medium transition-all duration-150 focus:outline-none focus:ring-2 focus:ring-blue-500/30 ${
+                        currentView === "focus"
+                          ? "bg-white text-slate-800 shadow-sm"
+                          : "text-slate-500 hover:text-slate-700"
+                      }`}
+                    >
+                      <svg className="h-3 w-3 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden>
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                      </svg>
+                      Focus
+                    </button>
+                  </div>
+                </div>
+              </div>
+              {(() => {
+                const clampedIndex = Math.min(focusIndex, visibleTests.length - 1);
+                const tc = visibleTests[clampedIndex];
+                return (
+                  <div style={{ overflow: "hidden" }}>
+                    <div ref={focusAnimRef} className={focusSlideDir === "next" ? "focus-slide-next" : "focus-slide-prev"}>
+                      <TestCaseCard
+                        tc={tc}
+                        execution={getExecution(tc.id)}
+                        onUpdate={updateExecution}
+                        isExpanded={expandedByTestId[tc.id] === true}
+                        onToggleExpand={() =>
+                          setExpandedByTestId((prev) => ({ ...prev, [tc.id]: !prev[tc.id] }))
+                        }
+                        isFullExpanded={fullExpandedByTestId[tc.id] === true}
+                        onExpandAll={() => {
+                          setExpandedByTestId((prev) => ({ ...prev, [tc.id]: true }));
+                          setFullExpandedByTestId((prev) => ({ ...prev, [tc.id]: true }));
+                        }}
+                        onCollapseAll={() => {
+                          setExpandedByTestId((prev) => ({ ...prev, [tc.id]: false }));
+                          setFullExpandedByTestId((prev) => ({ ...prev, [tc.id]: false }));
+                        }}
+                        isFocusView={true}
+                      />
+                    </div>
+                  </div>
+                );
+              })()}
+            </>
+          )}
+        </div>
+      )}
     </>
   );
 }

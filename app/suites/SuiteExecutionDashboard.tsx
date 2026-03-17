@@ -272,6 +272,8 @@ function buildPieChartSvg(
   let acc = 0;
   const paths = slices
     .map(({ pct, color }) => {
+      if (pct <= 0) return "";
+      if (pct >= 99.99) return `<circle cx="${cx}" cy="${cy}" r="${r}" fill="${color}"/>`;
       const start = point(acc);
       acc += pct;
       const end = point(acc);
@@ -314,6 +316,8 @@ function buildPieChartSvgForReport(
   let acc = 0;
   const paths = slices
     .map(({ pct, color, status }) => {
+      if (pct <= 0) return "";
+      if (pct >= 99.99) return `<circle cx="${cx}" cy="${cy}" r="${r}" fill="${color}" data-status="${status}" role="button" tabindex="0" style="cursor:pointer"/>`;
       const start = point(acc);
       acc += pct;
       const end = point(acc);
@@ -1046,20 +1050,54 @@ function ExecutionPieChart({
   const slices = STATUS_CHART_ITEMS.map(({ key, fill }) => {
     const count = counts[key];
     const pct = (count / sum) * 100;
-    const start = point(acc);
-    acc += pct;
-    const end = point(acc);
-    const large = pct > 50 ? 1 : 0;
-    const d = `M ${cx} ${cy} L ${start.x} ${start.y} A ${r} ${r} 0 ${large} 1 ${end.x} ${end.y} Z`;
+    const isFullCircle = pct >= 99.99;
+    const isZero = pct <= 0;
+    let d = "";
+    if (!isZero && !isFullCircle) {
+      const start = point(acc);
+      acc += pct;
+      const end = point(acc);
+      const large = pct > 50 ? 1 : 0;
+      d = `M ${cx} ${cy} L ${start.x} ${start.y} A ${r} ${r} 0 ${large} 1 ${end.x} ${end.y} Z`;
+    } else {
+      acc += pct;
+    }
     const status = CHART_KEY_TO_STATUS[key];
-    return { d, fill, status };
+    return { d, fill, status, isFullCircle, isZero };
   });
 
   return (
     <svg width={200} height={200} viewBox="0 0 200 200" className="shrink-0 cursor-pointer" aria-label="Execution status pie chart">
-      {slices.map(({ d, fill, status }, i) => {
+      {slices.map(({ d, fill, status, isFullCircle, isZero }, i) => {
+        if (isZero) return null;
         const isSelected = selectedStatuses.has(status);
         const isDimmed = selectedStatuses.size > 0 && !isSelected;
+        if (isFullCircle) return (
+          <circle
+            key={i}
+            cx={cx}
+            cy={cy}
+            r={r}
+            fill={fill}
+            opacity={isDimmed ? 0.35 : 1}
+            className="transition-opacity duration-200 hover:opacity-100 outline-none focus:outline-none focus:ring-0"
+            style={{ outline: "none" }}
+            role="button"
+            tabIndex={0}
+            aria-label={isSelected ? `Remove ${status} from filter` : `Filter by ${status}`}
+            aria-pressed={isSelected}
+            onClick={(e) => {
+              e.stopPropagation();
+              onSliceClick(status);
+            }}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" || e.key === " ") {
+                e.preventDefault();
+                onSliceClick(status);
+              }
+            }}
+          />
+        );
         return (
           <path
             key={i}

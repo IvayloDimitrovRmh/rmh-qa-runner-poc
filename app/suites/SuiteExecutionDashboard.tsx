@@ -19,6 +19,7 @@ export interface QAAttachment {
   size: number;
   note?: string;
   dataUrl: string;
+  url?: string;
 }
 
 export interface ExecutionState {
@@ -1635,6 +1636,7 @@ function AttachmentField({
     type: string;
     size: number;
     dataUrl: string;
+    url?: string;
   };
   const [attachments, setAttachments] = useState<QAAttachment[]>(() => Array.isArray(execution.attachments) ? execution.attachments : []);
   const [linkInput, setLinkInput] = useState("");
@@ -1685,7 +1687,7 @@ function AttachmentField({
             size: url.length,
             dataUrl: "",
             url,
-          } as any,
+          },
         ]);
         setLinkInput("");
       }
@@ -2039,14 +2041,14 @@ function TestCaseCard({
 
 export default function SuiteExecutionDashboard({ suite }: { suite: GeneratedSuite }) {
     // Pagination state
-    const [pageSize, setPageSize] = useState(() => {
+    const [pageSize, setPageSize] = useState<number>(() => {
       try {
         const raw = sessionStorage.getItem(`qa-ui:${suite.suiteName}`);
         if (raw) { const s = JSON.parse(raw); if (typeof s.pageSize === "number" && [5,10,20].includes(s.pageSize)) return s.pageSize; }
       } catch { /* ignore */ }
       return 5;
     });
-    const [page, setPage] = useState(() => {
+    const [page, setPage] = useState<number>(() => {
       try {
         const raw = sessionStorage.getItem(`qa-ui:${suite.suiteName}`);
         if (raw) { const s = JSON.parse(raw); if (typeof s.page === "number" && s.page >= 0) return s.page; }
@@ -2092,7 +2094,7 @@ export default function SuiteExecutionDashboard({ suite }: { suite: GeneratedSui
     } catch { /* ignore */ }
     return "list";
   });
-  const [focusIndex, setFocusIndex] = useState(() => {
+  const [focusIndex, setFocusIndex] = useState<number>(() => {
     try {
       const raw = sessionStorage.getItem(`qa-ui:${suite.suiteName}`);
       if (raw) {
@@ -2709,12 +2711,8 @@ export default function SuiteExecutionDashboard({ suite }: { suite: GeneratedSui
                     <button
                       type="button"
                       onClick={() => setCurrentView("list")}
-                      aria-pressed={currentView === "list"}
-                      className={`inline-flex items-center gap-1 rounded px-2.5 py-1 text-xs font-medium transition-all duration-150 focus:outline-none focus:ring-2 focus:ring-blue-500/30 ${
-                        currentView === "list"
-                          ? "bg-white text-slate-800 shadow-sm"
-                          : "text-slate-500 hover:text-slate-700"
-                      }`}
+                      aria-pressed={false}
+                      className="inline-flex items-center gap-1 rounded px-2.5 py-1 text-xs font-medium transition-all duration-150 focus:outline-none focus:ring-2 focus:ring-blue-500/30 text-slate-500 hover:text-slate-700"
                     >
                       <svg className="h-3 w-3 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden>
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 10h16M4 14h16M4 18h16" />
@@ -2724,12 +2722,8 @@ export default function SuiteExecutionDashboard({ suite }: { suite: GeneratedSui
                     <button
                       type="button"
                       onClick={() => setCurrentView("focus")}
-                      aria-pressed={currentView === "focus"}
-                      className={`inline-flex items-center gap-1 rounded px-2.5 py-1 text-xs font-medium transition-all duration-150 focus:outline-none focus:ring-2 focus:ring-blue-500/30 ${
-                        currentView === "focus"
-                          ? "bg-white text-slate-800 shadow-sm"
-                          : "text-slate-500 hover:text-slate-700"
-                      }`}
+                      aria-pressed={true}
+                      className="inline-flex items-center gap-1 rounded px-2.5 py-1 text-xs font-medium transition-all duration-150 focus:outline-none focus:ring-2 focus:ring-blue-500/30 bg-white text-slate-800 shadow-sm"
                     >
                       <svg className="h-3 w-3 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden>
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />

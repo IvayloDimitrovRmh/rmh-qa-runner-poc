@@ -150,17 +150,18 @@ function loadFromStorage(searchText: string): LoadedSuiteState {
     if (!raw) return { executionState: {} };
     const data = JSON.parse(raw) as unknown;
     if (!data || typeof data !== "object") return { executionState: {} };
+    const rec = data as Record<string, unknown>;
     const hasNewShape =
-      "executionState" in data &&
-      typeof (data as Record<string, unknown>).executionState === "object";
+      "executionState" in rec &&
+      typeof rec.executionState === "object";
     const map = hasNewShape
-      ? (data as { executionState: Record<string, unknown>; suiteName?: string })
-          .executionState
-      : (data as Record<string, unknown>);
+      ? (rec.executionState as Record<string, unknown>)
+      : rec;
     const suiteName =
       hasNewShape &&
-      typeof (data as { suiteName?: string }).suiteName === "string"
-        ? (data as { suiteName: string }).suiteName
+      "suiteName" in rec &&
+      typeof rec.suiteName === "string"
+        ? rec.suiteName
         : undefined;
     const result: Record<string, ExecutionState> = {};
     for (const key of Object.keys(map)) {

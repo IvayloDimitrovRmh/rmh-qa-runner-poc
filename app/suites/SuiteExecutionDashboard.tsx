@@ -1996,8 +1996,22 @@ function TestCaseCard({
   isFocusView?: boolean;
   cardRef?: (el: HTMLElement | null) => void;
 }) {
+  const statusStyle: React.CSSProperties =
+    execution.status === "PASS"
+      ? { borderLeft: "3px solid rgba(34,197,94,0.65)", boxShadow: "0 0 0 1px rgba(34,197,94,0.08), 0 1px 3px rgba(34,197,94,0.06)" }
+      : execution.status === "FAIL"
+      ? { borderLeft: "3px solid rgba(239,68,68,0.65)", boxShadow: "0 0 0 1px rgba(239,68,68,0.08), 0 1px 3px rgba(239,68,68,0.06)" }
+      : execution.status === "BLOCKED"
+      ? { borderLeft: "3px solid rgba(249,115,22,0.60)", boxShadow: "0 0 0 1px rgba(249,115,22,0.07), 0 1px 3px rgba(249,115,22,0.05)" }
+      : { borderLeft: "3px solid transparent" };
+
   return (
-    <article ref={cardRef} tabIndex={-1} className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm outline-none">
+    <article
+      ref={cardRef}
+      tabIndex={-1}
+      className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm outline-none"
+      style={{ transition: "border-left-color 150ms ease-out, box-shadow 150ms ease-out, transform 150ms ease-out", transform: execution.status !== "NOT RUN" ? "scale(1.005)" : "scale(1)", ...statusStyle }}
+    >
       <div className="mb-4 rounded-lg border border-slate-200 bg-slate-50/80 p-4">
         <div className="mb-2 flex items-center justify-between gap-2">
           <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">
@@ -2290,59 +2304,86 @@ export default function SuiteExecutionDashboard({ suite }: { suite: GeneratedSui
   const from = visibleTests.length === 0 ? 0 : page * pageSize + 1;
   const to = Math.min((page + 1) * pageSize, visibleTests.length);
 
+  function ListPageNav() {
+    return (
+      <div className="grid items-center mb-2" style={{ gridTemplateColumns: "1fr auto 1fr" }}>
+        {/* Left spacer */}
+        <div />
+        {/* Center: large nav buttons — truly centered */}
+        <div className="flex items-center gap-2 justify-self-center">
+          <button
+            type="button"
+            onClick={() => setPage(p => Math.max(0, p - 1))}
+            disabled={page === 0}
+            className="rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-600 shadow-sm hover:bg-slate-50 disabled:opacity-40 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+            aria-label="Previous page"
+          >
+            ← Previous
+          </button>
+          <span className="text-xs font-medium text-slate-500">
+            Page {page + 1} of {totalPages}
+          </span>
+          <button
+            type="button"
+            onClick={() => setPage(p => Math.min(totalPages - 1, p + 1))}
+            disabled={page >= totalPages - 1}
+            className="rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-600 shadow-sm hover:bg-slate-50 disabled:opacity-40 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+            aria-label="Next page"
+          >
+            Next →
+          </button>
+        </div>
+        {/* Right spacer */}
+        <div />
+      </div>
+    );
+  }
+
   function PaginationControls() {
     return (
-      <div className="flex items-center gap-2 mb-2">
-        <span className="text-xs text-slate-500">
-          Showing {from}–{to} of {visibleTests.length} test{visibleTests.length === 1 ? '' : 's'}
-        </span>
-        <label className="text-xs text-slate-500 flex items-center gap-1">
-          Page size
-          <select
-            className="rounded border border-slate-200 bg-white px-1.5 py-0.5 text-xs focus:outline-none focus:ring-2 focus:ring-blue-200"
-            value={pageSize}
-            onChange={e => { setPageSize(Number(e.target.value)); setPage(0); }}
+      <div className="grid items-center mb-2" style={{ gridTemplateColumns: "1fr auto 1fr" }}>
+        {/* Left: info */}
+        <div className="flex items-center gap-2 justify-self-start">
+          <span className="text-xs text-slate-500">
+            Showing {from}–{to} of {visibleTests.length} test{visibleTests.length === 1 ? '' : 's'}
+          </span>
+          <label className="text-xs text-slate-500 flex items-center gap-1">
+            Page size
+            <select
+              className="rounded border border-slate-200 bg-white px-1.5 py-0.5 text-xs focus:outline-none focus:ring-2 focus:ring-blue-200"
+              value={pageSize}
+              onChange={e => { setPageSize(Number(e.target.value)); setPage(0); }}
+            >
+              {[5, 10, 20].map(sz => <option key={sz} value={sz}>{sz}</option>)}
+            </select>
+          </label>
+        </div>
+        {/* Center: large nav buttons — truly centered */}
+        <div className="flex items-center gap-2 justify-self-center">
+          <button
+            type="button"
+            onClick={() => setPage(p => Math.max(0, p - 1))}
+            disabled={page === 0}
+            className="rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-600 shadow-sm hover:bg-slate-50 disabled:opacity-40 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+            aria-label="Previous page"
           >
-            {[5, 10, 20].map(sz => <option key={sz} value={sz}>{sz}</option>)}
-          </select>
-        </label>
-        <button
-          type="button"
-          className="rounded px-2 py-1 text-xs font-medium text-slate-600 hover:bg-slate-100 disabled:opacity-40"
-          onClick={() => setPage(p => Math.max(0, p - 1))}
-          disabled={page === 0}
-          aria-label="Previous page"
-        >
-          Previous
-        </button>
-        {/* Page numbers if simple */}
-        {totalPages <= 7 ? (
-          <div className="flex gap-1">
-            {Array.from({ length: totalPages }, (_, i) => (
-              <button
-                key={i}
-                type="button"
-                className={`rounded px-2 py-1 text-xs font-medium ${i === page ? 'bg-blue-100 text-blue-700' : 'text-slate-600 hover:bg-slate-100'}`}
-                onClick={() => setPage(i)}
-                aria-current={i === page ? 'page' : undefined}
-              >
-                {i + 1}
-              </button>
-            ))}
-          </div>
-        ) : (
-          <span className="text-xs text-slate-500">Page {page + 1} of {totalPages}</span>
-        )}
-        <button
-          type="button"
-          className="rounded px-2 py-1 text-xs font-medium text-slate-600 hover:bg-slate-100 disabled:opacity-40"
-          onClick={() => setPage(p => Math.min(totalPages - 1, p + 1))}
-          disabled={page >= totalPages - 1}
-          aria-label="Next page"
-        >
-          Next
-        </button>
-        <div className="ml-auto flex items-center rounded-md border border-slate-200 bg-slate-100/70 p-0.5" role="group" aria-label="View mode">
+            ← Previous
+          </button>
+          <span className="text-xs font-medium text-slate-500">
+            Page {page + 1} of {totalPages}
+          </span>
+          <button
+            type="button"
+            onClick={() => setPage(p => Math.min(totalPages - 1, p + 1))}
+            disabled={page >= totalPages - 1}
+            className="rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-600 shadow-sm hover:bg-slate-50 disabled:opacity-40 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+            aria-label="Next page"
+          >
+            Next →
+          </button>
+        </div>
+        {/* Right: view toggle */}
+        <div className="flex items-center justify-self-end rounded-md border border-slate-200 bg-slate-100/70 p-0.5" role="group" aria-label="View mode">
           <button
             type="button"
             onClick={() => setCurrentView("list")}
@@ -2410,9 +2451,28 @@ export default function SuiteExecutionDashboard({ suite }: { suite: GeneratedSui
     suite.testCases.length,
   ]);
 
+  // Keyboard pagination: ArrowLeft/ArrowRight in List View only
+  useEffect(() => {
+    if (currentView !== "list") return;
+    function handleKeyDown(e: KeyboardEvent) {
+      if (e.ctrlKey || e.altKey || e.metaKey || e.shiftKey) return;
+      const tag = (e.target as HTMLElement)?.tagName ?? "";
+      const editable = (e.target as HTMLElement)?.isContentEditable;
+      if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT" || editable) return;
+      if (e.key === "ArrowLeft") {
+        e.preventDefault();
+        setPage(p => Math.max(0, p - 1));
+      } else if (e.key === "ArrowRight") {
+        e.preventDefault();
+        setPage(p => Math.min(totalPages - 1, p + 1));
+      }
+    }
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [currentView, totalPages]);
+
   const updateExecution = useCallback((next: ExecutionState) => {
     const prevStatus = executionByTestId[next.testId]?.status ?? "NOT RUN";
-    // Auto-expand comments & attachments once when transitioning from NOT RUN to FAIL/BLOCKED
     if (
       (next.status === "FAIL" || next.status === "BLOCKED") &&
       prevStatus === "NOT RUN" &&
@@ -2876,16 +2936,16 @@ export default function SuiteExecutionDashboard({ suite }: { suite: GeneratedSui
                 const clampedIndex = Math.min(focusIndex, visibleTests.length - 1);
                 const tc = visibleTests[clampedIndex];
                 return (
-                  <div style={{ overflow: "hidden" }}>
+                  <div style={{ overflow: "clip", overflowClipMargin: "6px" }}>
                     <div ref={focusAnimRef} className={focusSlideDir === "next" ? "focus-slide-next" : "focus-slide-prev"}>
                       <TestCaseCard
                         key={tc.id}
                         tc={tc}
                         execution={getExecution(tc.id)}
                         onUpdate={updateExecution}
-                        isExpanded={expandedByTestId[tc.id] === true}
+                        isExpanded={expandedByTestId[tc.id] ?? true}
                         onToggleExpand={() =>
-                          setExpandedByTestId((prev) => ({ ...prev, [tc.id]: !prev[tc.id] }))
+                          setExpandedByTestId((prev) => ({ ...prev, [tc.id]: !(prev[tc.id] ?? true) }))
                         }
                         isFullExpanded={fullExpandedByTestId[tc.id] === true}
                         onExpandAll={() => {

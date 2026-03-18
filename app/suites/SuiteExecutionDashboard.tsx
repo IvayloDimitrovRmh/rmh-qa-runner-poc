@@ -34,8 +34,12 @@ const STATUS_OPTIONS: ExecutionStatus[] = ["NOT RUN", "PASS", "FAIL", "BLOCKED"]
 const FILTER_OPTIONS = ["ALL", ...STATUS_OPTIONS] as const;
 export type StatusFilter = (typeof FILTER_OPTIONS)[number];
 
+// Stable reference used by getDefaultExecution so the attachments dep never
+// changes between renders for tests that haven't been touched yet.
+const STABLE_EMPTY_ATTACHMENTS: QAAttachment[] = [];
+
 function getDefaultExecution(testId: string): ExecutionState {
-  return { testId, status: "NOT RUN", comment: "", attachment: "", attachments: [] };
+  return { testId, status: "NOT RUN", comment: "", attachment: "", attachments: STABLE_EMPTY_ATTACHMENTS };
 }
 
 /** Parsed attachment: either plain text or an uploaded image (name + data URL) */
@@ -406,9 +410,15 @@ function getReportPageScript(): string {
 
   function applyFilter(){
     for (var i = 0; i < rows.length; i++) {
+      if (rows[i].getAttribute("data-steps-row")) continue;
       var status = rows[i].getAttribute("data-status");
       var show = selected.length === 0 || selected.indexOf(status) !== -1;
       rows[i].classList.toggle("report-row-hidden", !show);
+      var tid = rows[i].getAttribute("data-test-id");
+      if (tid) {
+        var sr = document.querySelector("tr[data-steps-for='" + tid + "'][data-steps-row]");
+        if (sr) sr.classList.toggle("report-steps-filtered", !show);
+      }
     }
   }
   function updateFilterUI(){
@@ -472,6 +482,20 @@ function getReportPageScript(): string {
       e.preventDefault();
       var src = btn.getAttribute("data-src");
       if (src && lightbox && lightboxImg) { lightboxImg.src = src; lightbox.classList.add("report-lightbox-open"); }
+    }
+  });
+  document.addEventListener("click", function(e){
+    var sbtn = e.target && e.target.closest && e.target.closest(".report-steps-btn");
+    if (sbtn) {
+      var tid = sbtn.getAttribute("data-steps-for");
+      if (!tid) return;
+      var detailRow = document.querySelector("tr[data-steps-for='" + tid + "'][data-steps-row]");
+      if (!detailRow) return;
+      var isExpanded = sbtn.getAttribute("aria-expanded") === "true";
+      sbtn.setAttribute("aria-expanded", isExpanded ? "false" : "true");
+      var lbl = sbtn.querySelector(".steps-btn-label");
+      if (lbl) lbl.textContent = isExpanded ? "View Steps" : "Hide Steps";
+      detailRow.classList.toggle("report-steps-open", !isExpanded);
     }
   });
   if (lightboxClose) lightboxClose.addEventListener("click", function(){ if (lightbox) lightbox.classList.remove("report-lightbox-open"); });
@@ -741,11 +765,11 @@ function getOfflineRunnerScript(): string {
   }
 
   var app = document.getElementById("app");
-  app.innerHTML = "<h1>RMH QA Suite Runner (offline)</h1><p class=\\"meta\\">Suite: " + esc(payload.suiteName) + " – " + testCases.length + " tests. Edit below and use \\"Download progress for import\\" to bring changes back into the main app.</p>"
+  app.innerHTML = "<h1>RMH QA Suite Runner (offline)</h1><p class=\\"meta\\">Suite: " + esc(payload.suiteName) + " – " + testCases.length + " tests. Edit below and use \\"Download progress\\" to bring changes back into the main app.</p>"
     + "<div class=\\"summary-card\\" id=\\"rmh-summary\\"></div>"
     + "<div class=\\"summary-card\\" id=\\"rmh-chart\\"></div>"
     + "<div id=\\"rmh-cards\\"></div>"
-    + "<div class=\\"download-section\\"><h2>Download progress for import</h2><p>Use one of these to save your work and import it later in the main RMH QA Suite Runner.</p><button type=\\"button\\" class=\\"btn btn-primary\\" id=\\"rmh-dl-json\\">Download as JSON</button></div>";
+    + "<div class=\\"download-section\\"><h2>Download progress</h2><p>Use one of these to save your work and import it later in the main RMH QA Suite Runner.</p><button type=\\"button\\" class=\\"btn btn-primary\\" id=\\"rmh-dl-json\\">Download as JSON</button></div>";
   renderSummary();
   renderChart();
   renderCards();
@@ -764,6 +788,15 @@ function downloadJson(data: unknown, filename: string) {
   a.download = filename;
   a.click();
   URL.revokeObjectURL(url);
+}
+
+function countStepsInScenario(content: string): number {
+  const blocks = parseScenarioBlocks(content);
+  let count = 0;
+  for (const block of blocks) {
+    if (block.type === "ol" || block.type === "ul") count += block.items.length;
+  }
+  return count;
 }
 
 function buildExportHtml(
@@ -825,14 +858,24 @@ function buildExportHtml(
       const commentHtml = ex.comment.trim()
         ? `<span class="report-comment-text">${escapeHtml(ex.comment)}</span>`
         : `<span class="report-comment-empty">-</span>`;
-      return `<tr data-status="${escapeHtml(ex.status)}" data-test-id="${escapeHtml(tc.id)}">
+      const stepCount = countStepsInScenario(tc.scenarioContent);
+      const stepsContentHtml = getScenarioHtml(tc.scenarioContent);
+      const safeId = escapeHtml(tc.id);
+      const stepsBtnHtml = stepCount > 0
+        ? `<button type="button" class="report-steps-btn" aria-expanded="false" data-steps-for="${safeId}"><span class="steps-btn-label">View Steps</span><span class="steps-count-badge">${stepCount}</span><svg class="steps-chevron" width="10" height="10" viewBox="0 0 10 10" fill="none" aria-hidden="true"><path d="M2 3.5L5 6.5L8 3.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></button>`
+        : `<span class="report-no-steps">No steps</span>`;
+      const detailRowHtml = stepCount > 0
+        ? `<tr data-steps-row="1" data-steps-for="${safeId}" class="report-steps-row"><td colspan="7" style="padding:0;border-top:none"><div class="report-steps-panel"><div class="report-steps-panel-inner"><div class="report-steps-panel-header"><span class="report-steps-panel-title">Test Steps</span><span class="report-steps-panel-count">${stepCount} step${stepCount !== 1 ? "s" : ""}</span></div><div class="report-steps-content">${stepsContentHtml}</div></div></div></td></tr>`
+        : "";
+      return `<tr data-status="${escapeHtml(ex.status)}" data-test-id="${safeId}">
         <td class="report-cell-id">${escapeHtml(tc.id)}</td>
         <td class="report-cell-name">${escapeHtml(scenarioTitle)}</td>
         <td class="report-cell-source">${escapeHtml(sourceBasename)}</td>
         <td class="report-cell-status"><span class="report-status-badge ${badgeClass}">${escapeHtml(ex.status)}</span></td>
         <td class="report-cell-comment">${commentHtml}</td>
         <td class="report-cell-attachment">${attachmentCellHtml(ex)}</td>
-      </tr>`;
+        <td class="report-cell-steps">${stepsBtnHtml}</td>
+      </tr>${detailRowHtml}`;
     })
     .join("\n");
 
@@ -932,6 +975,39 @@ function buildExportHtml(
     .report-download-section .report-dl-btn:hover { background: #f8fafc; color: #0f172a; }
     .report-download-section .report-dl-btn-primary { background: #2563eb; color: #fff; border-color: #2563eb; }
     .report-download-section .report-dl-btn-primary:hover { background: #1d4ed8; }
+    .report-col-steps { width: 7rem; white-space: nowrap; }
+    .report-cell-steps { text-align: center; vertical-align: middle; }
+    .report-steps-btn { display: inline-flex; align-items: center; gap: 0.375rem; padding: 0.3125rem 0.75rem; font-size: 0.75rem; font-weight: 600; color: #3b82f6; background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 9999px; cursor: pointer; white-space: nowrap; transition: background 0.15s, border-color 0.15s, color 0.15s; }
+    .report-steps-btn:hover { background: #dbeafe; border-color: #93c5fd; color: #2563eb; }
+    .report-steps-btn:focus-visible { outline: 2px solid #3b82f6; outline-offset: 2px; }
+    .report-steps-btn[aria-expanded="true"] { background: #dbeafe; border-color: #93c5fd; }
+    .steps-count-badge { display: inline-flex; align-items: center; justify-content: center; min-width: 1.25rem; height: 1.25rem; padding: 0 0.25rem; background: #3b82f6; color: #fff; border-radius: 9999px; font-size: 0.625rem; font-weight: 700; line-height: 1; }
+    .report-steps-btn[aria-expanded="true"] .steps-count-badge { background: #2563eb; }
+    .steps-chevron { flex-shrink: 0; transition: transform 0.2s ease; color: #3b82f6; }
+    .report-steps-btn[aria-expanded="true"] .steps-chevron { transform: rotate(180deg); }
+    .report-no-steps { font-size: 0.8125rem; color: #94a3b8; }
+    .report-steps-row { display: none; }
+    .report-steps-row.report-steps-open { display: table-row; }
+    .report-steps-filtered { display: none !important; }
+    .report-steps-panel { padding: 1rem 1.25rem 1.25rem; background: linear-gradient(to bottom, #f8fafc, #f1f5f9); border-bottom: 1px solid #e2e8f0; }
+    .report-steps-panel-inner { background: #fff; border: 1px solid #e2e8f0; border-radius: 0.75rem; padding: 1.25rem 1.5rem; box-shadow: 0 1px 3px rgba(0,0,0,0.06); animation: steps-fadein 0.18s ease; }
+    .report-steps-panel-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 1rem; padding-bottom: 0.625rem; border-bottom: 1px solid #f1f5f9; }
+    .report-steps-panel-title { font-size: 0.6875rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: #475569; }
+    .report-steps-panel-count { font-size: 0.75rem; color: #94a3b8; font-weight: 500; }
+    .report-steps-content { font-size: 0.875rem; color: #334155; line-height: 1.65; }
+    .report-steps-content .scenario-h2 { font-size: 0.9375rem; font-weight: 700; color: #0f172a; margin: 0.875rem 0 0.5rem; padding-bottom: 0.3125rem; border-bottom: 1px solid #f1f5f9; }
+    .report-steps-content .scenario-section { font-size: 0.6875rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: #64748b; margin: 1rem 0 0.375rem; }
+    .report-steps-content .scenario-ul { list-style: none; padding: 0; margin: 0.25rem 0 0.75rem; }
+    .report-steps-content .scenario-ul li { display: flex; align-items: flex-start; gap: 0.625rem; padding: 0.4375rem 0.75rem; margin-bottom: 0.25rem; border-radius: 0.375rem; background: #f8fafc; border: 1px solid #f1f5f9; }
+    .report-steps-content .scenario-ul li::before { content: "•"; color: #94a3b8; font-weight: 700; flex-shrink: 0; }
+    .report-steps-content .scenario-ol { list-style: none; padding: 0; margin: 0.25rem 0 0.75rem; counter-reset: steps-ctr; }
+    .report-steps-content .scenario-ol li { display: flex; align-items: flex-start; gap: 0.75rem; padding: 0.5625rem 0.875rem; margin-bottom: 0.375rem; border-radius: 0.5rem; border: 1px solid #e2e8f0; background: #fafcff; counter-increment: steps-ctr; transition: background 0.1s; }
+    .report-steps-content .scenario-ol li:hover { background: #f0f7ff; }
+    .report-steps-content .scenario-ol li::before { content: counter(steps-ctr); display: inline-flex; align-items: center; justify-content: center; min-width: 1.5rem; height: 1.5rem; background: #3b82f6; color: #fff; border-radius: 50%; font-size: 0.6875rem; font-weight: 700; flex-shrink: 0; margin-top: 0.0625rem; }
+    .report-steps-content .scenario-hr { border: 0; border-top: 1px solid #e2e8f0; margin: 0.75rem 0; }
+    .report-steps-content .scenario-p { margin: 0.25rem 0; }
+    .report-steps-content .scenario-strong { font-weight: 700; color: #0f172a; }
+    @keyframes steps-fadein { from { opacity: 0; transform: translateY(-5px); } to { opacity: 1; transform: translateY(0); } }
   </style>
 </head>
 <body>
@@ -992,6 +1068,7 @@ function buildExportHtml(
             <th>Status</th>
             <th>Comment</th>
             <th>Attachment</th>
+            <th class="report-col-steps">Steps</th>
           </tr>
         </thead>
         <tbody>
@@ -1002,7 +1079,7 @@ ${rows}
     </div>
 
     <div class="report-download-section">
-      <h2>Download progress for import</h2>
+      <h2>Download progress</h2>
       <p>Use one of these to download the execution state for import into the main RMH QA Suite Runner.</p>
       <button type="button" class="report-dl-btn report-dl-btn-primary" id="report-dl-json">Download as JSON</button>
     </div>
@@ -1483,18 +1560,26 @@ function renderBlock(block: Block, key: number): React.ReactNode {
   }
   if (block.type === "ul") {
     return (
-      <ul key={key} className="list-disc pl-5 space-y-0.5 my-1">
+      <ul key={key} className="list-none p-0 space-y-1.5 my-1.5">
         {block.items.map((item, j) => (
-          <li key={j}>{renderInlineBold(item)}</li>
+          <li key={j} className="flex items-start gap-2.5 rounded-md border border-slate-100 bg-slate-50 px-3 py-2 text-sm text-slate-700 leading-snug">
+            <span className="mt-px text-slate-400 select-none">•</span>
+            <span>{renderInlineBold(item)}</span>
+          </li>
         ))}
       </ul>
     );
   }
   if (block.type === "ol") {
     return (
-      <ol key={key} className="list-decimal pl-5 space-y-0.5 my-1">
+      <ol key={key} className="list-none p-0 space-y-1.5 my-1.5">
         {block.items.map((item, j) => (
-          <li key={j}>{renderInlineBold(item)}</li>
+          <li key={j} className="flex items-start gap-3 rounded-lg border border-slate-200 bg-white px-3.5 py-2.5 text-sm text-slate-700 leading-snug hover:bg-blue-50/40 transition-colors duration-100">
+            <span className="mt-px flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-blue-500 text-[0.6rem] font-bold text-white leading-none">
+              {j + 1}
+            </span>
+            <span>{renderInlineBold(item)}</span>
+          </li>
         ))}
       </ol>
     );
@@ -1641,19 +1726,26 @@ function AttachmentField({
   const [attachments, setAttachments] = useState<QAAttachment[]>(() => Array.isArray(execution.attachments) ? execution.attachments : []);
   const [linkInput, setLinkInput] = useState("");
 
-  // Sync attachments to parent only after state changes, not during render
+  // Always-fresh refs so the write-back effect never closes over stale values.
+  const executionRef = useRef(execution);
+  const onUpdateRef = useRef(onUpdate);
+  executionRef.current = execution;
+  onUpdateRef.current = onUpdate;
+
+  // Sync attachments to local state whenever the parent passes in new ones
+  // (e.g. navigating to a different test case in focus view).
   useEffect(() => {
     if (Array.isArray(execution.attachments)) {
       setAttachments(execution.attachments);
     }
   }, [execution.attachments]);
 
+  // Write back local attachment changes to the parent.  Uses refs so it always
+  // operates on the current test's execution object, not a stale closure copy.
   useEffect(() => {
-    // Notify parent only after attachments change
-    if (attachments !== execution.attachments) {
-      onUpdate({ ...execution, attachments });
+    if (attachments !== executionRef.current.attachments) {
+      onUpdateRef.current({ ...executionRef.current, attachments });
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [attachments]);
   // Generic URL validation
   function isValidUrl(url: string) {
@@ -1891,6 +1983,7 @@ function TestCaseCard({
   onExpandAll,
   onCollapseAll,
   isFocusView = false,
+  cardRef,
 }: {
   tc: TestCaseDefinition;
   execution: ExecutionState;
@@ -1901,9 +1994,10 @@ function TestCaseCard({
   onExpandAll: () => void;
   onCollapseAll: () => void;
   isFocusView?: boolean;
+  cardRef?: (el: HTMLElement | null) => void;
 }) {
   return (
-    <article className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+    <article ref={cardRef} tabIndex={-1} className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm outline-none">
       <div className="mb-4 rounded-lg border border-slate-200 bg-slate-50/80 p-4">
         <div className="mb-2 flex items-center justify-between gap-2">
           <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">
@@ -1953,7 +2047,23 @@ function TestCaseCard({
         )}
       </div>
 
-      <div className="mb-4 flex flex-wrap items-center gap-3">
+      {(isFullExpanded || isFocusView) && (
+        <div className="qa-expand-in">
+          <div className="mb-4">
+            <label className="mb-1 block text-sm font-medium text-slate-600">Comment</label>
+            <textarea
+              value={execution.comment}
+              onChange={(e) => onUpdate({ ...execution, comment: e.target.value })}
+              placeholder="Optional"
+              rows={2}
+              className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 placeholder-slate-400 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+            />
+          </div>
+          <AttachmentField execution={execution} onUpdate={onUpdate} />
+        </div>
+      )}
+
+      <div className="mt-6 border-t border-slate-200 pt-4 flex flex-wrap items-center gap-3">
         <div className="flex items-center gap-2 text-sm text-slate-600">
           <span className="font-medium mr-1">Status</span>
           <div className="flex rounded-xl bg-white/95 border border-slate-100 shadow-sm px-1 py-0.5">
@@ -2019,22 +2129,6 @@ function TestCaseCard({
           </div>
         </div>
       </div>
-
-      {(isFullExpanded || isFocusView) && (
-        <div className="qa-expand-in">
-          <div className="mb-4">
-            <label className="mb-1 block text-sm font-medium text-slate-600">Comment</label>
-            <textarea
-              value={execution.comment}
-              onChange={(e) => onUpdate({ ...execution, comment: e.target.value })}
-              placeholder="Optional"
-              rows={2}
-              className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 placeholder-slate-400 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
-            />
-          </div>
-          <AttachmentField execution={execution} onUpdate={onUpdate} />
-        </div>
-      )}
     </article>
   );
 }
@@ -2111,6 +2205,7 @@ export default function SuiteExecutionDashboard({ suite }: { suite: GeneratedSui
   const [focusSlideDir, setFocusSlideDir] = useState<"next" | "prev">("next");
   const [focusAnimKey, setFocusAnimKey] = useState(0);
   const focusAnimRef = useRef<HTMLDivElement>(null);
+  const cardRefsMap = useRef<Map<string, HTMLElement>>(new Map());
 
   useEffect(() => {
     const el = focusAnimRef.current;
@@ -2651,24 +2746,67 @@ export default function SuiteExecutionDashboard({ suite }: { suite: GeneratedSui
           {/* Top Pagination */}
           <PaginationControls />
           {/* Test Cases List */}
-          {paginatedTests.map((tc) => (
+          {paginatedTests.map((tc, idx) => (
             <TestCaseCard
               key={tc.id}
               tc={tc}
               execution={getExecution(tc.id)}
               onUpdate={updateExecution}
               isExpanded={expandedByTestId[tc.id] === true}
-              onToggleExpand={() =>
-                setExpandedByTestId((prev) => ({ ...prev, [tc.id]: !prev[tc.id] }))
-              }
+              onToggleExpand={() => {
+                const wasExpanded = expandedByTestId[tc.id] === true;
+                console.log("[ToggleExpand] wasExpanded:", wasExpanded, "idx:", idx, "tc.id:", tc.id);
+                setExpandedByTestId((prev) => ({ ...prev, [tc.id]: !prev[tc.id] }));
+                if (wasExpanded) {
+                  const nextTc = paginatedTests[idx + 1];
+                  console.log("[ToggleExpand] next tc:", nextTc?.id ?? "none");
+                  if (nextTc) {
+                    requestAnimationFrame(() => {
+                      requestAnimationFrame(() => {
+                        const nextEl = cardRefsMap.current.get(nextTc.id);
+                        console.log("[ToggleExpand] next ref el:", nextEl);
+                        if (nextEl) {
+                          console.log("[ToggleExpand] focusing next card");
+                          nextEl.focus();
+                          const rect = nextEl.getBoundingClientRect();
+                          const elementTop = rect.top + window.scrollY;
+                          window.scrollTo({ top: elementTop - window.innerHeight * 0.3, behavior: "smooth" });
+                        }
+                      });
+                    });
+                  }
+                }
+              }}
               isFullExpanded={fullExpandedByTestId[tc.id] === true}
               onExpandAll={() => {
                 setExpandedByTestId((prev) => ({ ...prev, [tc.id]: true }));
                 setFullExpandedByTestId((prev) => ({ ...prev, [tc.id]: true }));
               }}
               onCollapseAll={() => {
+                console.log("[CollapseAll] Manual collapse detected, idx:", idx, "tc.id:", tc.id);
                 setExpandedByTestId((prev) => ({ ...prev, [tc.id]: false }));
                 setFullExpandedByTestId((prev) => ({ ...prev, [tc.id]: false }));
+                const nextTc = paginatedTests[idx + 1];
+                console.log("[CollapseAll] next tc:", nextTc?.id ?? "none");
+                if (nextTc) {
+                  requestAnimationFrame(() => {
+                    requestAnimationFrame(() => {
+                      const nextEl = cardRefsMap.current.get(nextTc.id);
+                      console.log("[CollapseAll] next ref el:", nextEl);
+                      if (nextEl) {
+                        console.log("[CollapseAll] focusing next card");
+                        nextEl.focus();
+                        const rect = nextEl.getBoundingClientRect();
+                        const elementTop = rect.top + window.scrollY;
+                        window.scrollTo({ top: elementTop - window.innerHeight * 0.3, behavior: "smooth" });
+                      }
+                    });
+                  });
+                }
+              }}
+              cardRef={(el) => {
+                if (el) cardRefsMap.current.set(tc.id, el);
+                else cardRefsMap.current.delete(tc.id);
               }}
             />
           ))}
@@ -2741,6 +2879,7 @@ export default function SuiteExecutionDashboard({ suite }: { suite: GeneratedSui
                   <div style={{ overflow: "hidden" }}>
                     <div ref={focusAnimRef} className={focusSlideDir === "next" ? "focus-slide-next" : "focus-slide-prev"}>
                       <TestCaseCard
+                        key={tc.id}
                         tc={tc}
                         execution={getExecution(tc.id)}
                         onUpdate={updateExecution}

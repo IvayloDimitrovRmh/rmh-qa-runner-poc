@@ -8,6 +8,7 @@ import {
   ExportedProgress,
   extractExecutionStateFromHtml,
   EMBEDDED_STATE_SCRIPT_ID,
+  parseProgressFile,
 } from "@/src/lib/progressImport";
 
 export type ExecutionStatus = "NOT RUN" | "PASS" | "FAIL" | "BLOCKED";
@@ -2569,30 +2570,41 @@ export default function SuiteExecutionDashboard({ suite }: { suite: GeneratedSui
           const raw = reader.result;
           if (typeof raw !== "string") return;
           const isHtml = file.name.toLowerCase().endsWith(".html") || file.type === "text/html";
-          if (isHtml) {
-            const data = extractExecutionStateFromHtml(raw);
-            if (!data) {
-              window.alert(
-                "This HTML file does not contain embedded progress data. It may be an older report or from another source. Import a progress file (Save Progress JSON or Export HTML) to restore state."
-              );
-              return;
-            }
-            applyImportedState(data);
-          } else {
-            const data = JSON.parse(raw) as unknown;
-            if (!data || typeof data !== "object" || !("executionState" in data)) {
-              window.alert("Invalid progress file. The file must contain execution state from Save Progress (JSON) or Export HTML.");
-              return;
-            }
-            applyImportedState(data as ExportedProgress);
+          const data = parseProgressFile(raw, isHtml);
+          if (!data) {
+            window.alert(
+              isHtml
+                ? "This HTML file does not contain embedded progress data. It may be an older report or from another source. Import a progress file (Save Progress JSON or Export HTML) to restore state."
+                : "Invalid progress file. The file must contain execution state from Save Progress (JSON) or Export HTML."
+            );
+            return;
           }
+          if (
+            typeof data.suiteName === "string" &&
+            data.suiteName !== suite.suiteName &&
+            data.suiteName !== displayTitle
+          ) {
+            const proceed = window.confirm(
+              `This file was exported from suite "${data.suiteName}". Current suite is "${displayTitle}". Import anyway?`
+            );
+            if (!proceed) return;
+          }
+          // Use the same localStorage path as the main page import so that
+          // all fields (including attachments) are restored via loadFromStorage.
+          window.localStorage.setItem(getStorageKey(suite.suiteName), JSON.stringify(data.executionState));
+          const loaded = loadFromStorage(suite.suiteName);
+          setSession((prev) => ({
+            ...prev,
+            executionState: loaded.executionState,
+            suiteName: typeof data.suiteName === "string" ? data.suiteName : prev.suiteName,
+          }));
         } catch {
           window.alert("Could not read the selected file. It may be corrupted or not a valid progress file.");
         }
       };
       reader.readAsText(file);
     },
-    [applyImportedState]
+    [suite.suiteName, displayTitle]
   );
 
   const [editingTitle, setEditingTitle] = useState(false);

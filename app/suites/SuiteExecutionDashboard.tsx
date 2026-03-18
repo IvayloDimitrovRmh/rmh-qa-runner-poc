@@ -2546,6 +2546,7 @@ export default function SuiteExecutionDashboard({ suite }: { suite: GeneratedSui
           status: ex.status,
           comment: typeof ex.comment === "string" ? ex.comment : "",
           attachment: typeof ex.attachment === "string" ? ex.attachment : "",
+          attachments: Array.isArray(ex.attachments) ? ex.attachments : [],
         };
       }
       setSession((prev) => ({
